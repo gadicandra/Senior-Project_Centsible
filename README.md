@@ -1,9 +1,7 @@
-# Centsible
+# Centsible <br> <br>
 
-Jaga Uangmu
-Kelompok MDG (My Duit Gweh)
-Ketua Kelompok: 
-Anggota 1: 
-Anggota 2: 
-Anggota 3: 
-Anggota 4: 
+Jaga Uangmu <br>
+Kelompok MDG (My Duit Gweh) <br>
+Ketua Kelompok: <br>
+Anggota 1: <br>
+Anggota 2: <br>
