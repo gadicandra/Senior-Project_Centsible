@@ -1,1 +1,3 @@
-
+theme: jekyll-theme-cayman
+title: Centsible
+description: **Centsible** adalah aplikasi web (PWA) pencatat keuangan pribadi untuk mahasiswa Indonesia yang menghilangkan hambatan terbesar dalam mencatat pengeluaran: prosesnya itu sendiri. Alih-alih mengisi form manual yang panjang, pengguna cukup mengetik atau mengucapkan transaksi secara natural (misalnya *"beli bensin gocap"*), dan AI agent akan mengekstrak serta menyusunnya menjadi data terstruktur — dengan konfirmasi satu ketukan agar akurasi tetap terjaga. Setelah data terkumpul, AI juga berperan sebagai penasihat keuangan yang memberi ringkasan pola pengeluaran dan rekomendasi anggaran yang actionable.
