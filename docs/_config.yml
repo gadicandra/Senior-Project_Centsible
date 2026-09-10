@@ -1,3 +1,5 @@
-theme: jekyll-theme-cayman
+remote_theme: pages-themes/cayman@v0.2.0
+plugins:
+- jekyll-remote-theme
 title: Centsible
-description: **Centsible** adalah aplikasi web (PWA) pencatat keuangan pribadi untuk mahasiswa Indonesia yang menghilangkan hambatan terbesar dalam mencatat pengeluaran: prosesnya itu sendiri. Alih-alih mengisi form manual yang panjang, pengguna cukup mengetik atau mengucapkan transaksi secara natural (misalnya *"beli bensin gocap"*), dan AI agent akan mengekstrak serta menyusunnya menjadi data terstruktur — dengan konfirmasi satu ketukan agar akurasi tetap terjaga. Setelah data terkumpul, AI juga berperan sebagai penasihat keuangan yang memberi ringkasan pola pengeluaran dan rekomendasi anggaran yang actionable.
+description: 'Centsible adalah aplikasi web (PWA) pencatat keuangan pribadi untuk mahasiswa Indonesia yang menghilangkan hambatan terbesar dalam mencatat pengeluaran: prosesnya itu sendiri. Alih-alih mengisi form manual yang panjang, pengguna cukup mengetik atau mengucapkan transaksi secara natural (misalnya *"beli bensin gocap"*), dan AI agent akan mengekstrak serta menyusunnya menjadi data terstruktur — dengan konfirmasi satu ketukan agar akurasi tetap terjaga. Setelah data terkumpul, AI juga berperan sebagai penasihat keuangan yang memberi ringkasan pola pengeluaran dan rekomendasi anggaran yang actionable.'
