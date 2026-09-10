@@ -137,3 +137,202 @@ Kombinasi aplikasi pencatatan dengan layanan perencanaan keuangan bersertifikat 
 
 **Key Competitive Advantage & Unique Value**
 Kesederhanaan. Andalan utama aplikasi ini adalah "bisa mencatat dengan klik paling sedikit". Mereka fokus membuat proses catat-mencatat jadi sangat praktis, walaupun efeknya fitur aplikasi ini jadi kurang lengkap dibanding yang lain.
+
+---
+
+# LAB 2.4 — MERANCANG SDLC PENGEMBANGAN PRODUK
+
+**Nama Kelompok:** MDG (My Duit Gweh) <br>
+**Nama Proyek:** Centsible <br>
+**Ketua Kelompok:** Garjita Adicandra — 24/535330/TK/59377 <br>
+**Anggota 1:** Muhammad Syauqi Fittuqo — 24/543713/TK/60433 <br>
+**Anggota 2:** Naufal Dzaky — 24/543697/TK/60431
+
+---
+
+## Metodologi SDLC
+
+### Metodologi yang digunakan
+
+**Agile — Scrumban**
+
+Scrumban adalah gabungan Scrum dan Kanban: jadwal dan pertemuan rutin diambil dari Scrum, sedangkan papan kerja dan batas jumlah tugas diambil dari Kanban.
+
+### Alasan pemilihan metodologi
+
+**1. Waktu luang tim naik-turun dan sulit ditebak — ini alasan utamanya.**
+Kami bertiga mahasiswa aktif yang juga punya tugas besar mata kuliah lain, praktikum, dan UTS/UAS. Scrum murni mengharuskan tim berjanji menyelesaikan sejumlah tugas dalam satu sprint, dan janji itu baru masuk akal kalau waktu luang tiap minggu kira-kira sama. Pada tim kami, waktu luang bisa tiba-tiba habis karena deadline mata kuliah lain, sehingga sprint yang gagal bukan karena cara kerjanya salah, tapi karena jadwal kuliah. Akibatnya angka kecepatan tim jadi tidak berguna untuk merencanakan sprint berikutnya. Scrumban membuang janji sprint tadi dan menggantinya dengan alur berkelanjutan: tugas **diambil sendiri** oleh anggota saat dia benar-benar punya waktu, bukan **dibagikan di awal** berdasarkan tebakan.
+
+**2. Bagian AI-nya belum bisa dipastikan dari awal.**
+Seberapa akurat AI membaca kalimat seperti *"beli bensin gocap"* baru ketahuan setelah dicoba dan diukur, lalu diperbaiki berulang kali. Karena itu Waterfall tidak cocok — Waterfall mengunci spesifikasi sebelum kami punya bukti. Pekerjaan coba-coba seperti ini juga sulit ditebak lamanya, jadi makin tidak cocok dipaksa masuk sprint dengan target tetap.
+
+**3. Prioritas harus bisa diubah kapan saja.**
+Di Scrum, daftar tugas dikunci selama sprint berjalan. Padahal hasil uji coba ke pengguna atau hasil pengukuran akurasi AI bisa mengubah prioritas di tengah jalan, dan menunggu sprint berikutnya berarti membuang waktu yang sudah sempit. Di Scrumban, urutan tugas boleh diatur ulang kapan saja selama tugasnya belum mulai dikerjakan.
+
+---
+
+## Perancangan Tahap 1–3 SDLC
+
+### a. Tujuan dari produk
+
+Membuat pencatatan keuangan harian mahasiswa jadi jauh lebih ringan: dari sekitar 8 langkah (20–40 detik) per transaksi menjadi **satu kalimat + satu kali ketuk untuk konfirmasi**. Dengan begitu kebiasaan mencatat bisa bertahan lama, datanya terkumpul cukup banyak, lalu diolah jadi ringkasan pola pengeluaran dan saran anggaran yang bisa langsung dijalankan.
+
+Target terukur sampai akhir semester:
+
+| Tujuan | Indikator |
+|---|---|
+| Mencatat jadi cepat | Waktu mencatat satu transaksi ≤ 10 detik (dari mulai mengetik sampai tersimpan) |
+| AI-nya akurat | ≥ 85% transaksi tersimpan tanpa perlu dibetulkan manual pada bagian nominal & kategori |
+| Penggunanya bertahan | ≥ 60% pengguna uji coba masih mencatat sampai hari ke-14 |
+| Datanya berguna | Tiap pengguna aktif dapat ringkasan mingguan & minimal 1 saran anggaran yang jelas |
+
+### b. Pengguna potensial dari produk dan kebutuhan para pengguna tersebut
+
+| Kelompok Pengguna | Karakteristik | Kebutuhan Utama |
+|---|---|---|
+| **Mahasiswa perantau** (pengguna utama) | Dapat uang saku bulanan/mingguan dari orang tua, 5–10 transaksi kecil per hari (makan, kos, transport, jajan) | Ingin tahu uangnya cukup atau tidak sampai kiriman berikutnya; ingin mencatat tanpa harus berhenti dari kegiatan yang sedang dilakukan |
+| **Mahasiswa yang punya penghasilan sendiri** (freelance, part-time, asisten praktikum) | Pemasukan tidak tetap dan waktunya tidak menentu, pengeluaran pribadi bercampur dengan keperluan kerja | Ingin memisahkan pengeluaran per kategori, melihat uang masuk dan keluar tiap periode, dan tahu bulan mana yang boncos |
+| **Mahasiswa yang sedang menabung** | Sedang mengumpulkan uang untuk laptop, KKN, atau jalan-jalan | Ingin menetapkan batas pengeluaran per kategori, dapat peringatan kalau boros, dan tahu perkiraan kapan target tabungannya tercapai |
+
+### c. Use case diagram
+
+<img width="7454" height="8192" alt="AMP Transaksi Data-2026-09-10-111548" src="https://github.com/user-attachments/assets/f0b263f3-0fc7-44a6-b2cf-db1aacf18778" />
+
+### d. Functional requirements untuk use case yang telah dirancang
+
+| FR | Deskripsi |
+|---|---|
+| **FR 1** | Pengguna bisa mendaftar dan masuk memakai email/password atau akun Google, bisa mengatur ulang password yang lupa, serta bisa menghapus akun beserta seluruh datanya. |
+| **FR 2** | Pengguna bisa mencatat transaksi dengan mengetik kalimat biasa dalam bahasa Indonesia, termasuk istilah sehari-hari untuk nominal seperti *gocap*, *ceban*, atau *25rb*, lewat satu kolom isian saja. |
+| **FR 3** | Sistem membaca kalimat tersebut dan memecahnya menjadi data: nominal, jenis (pemasukan/pengeluaran), kategori, dompet, keterangan, dan tanggal — termasuk kalau pengguna menulis *"kemarin"* atau *"tadi pagi"*. |
+| **FR 4** | Sebelum disimpan, sistem menampilkan kartu berisi hasil pembacaan AI dan **wajib** menunggu pengguna menekan tombol simpan. Setiap isian pada kartu itu bisa langsung dibetulkan di tempat. |
+| **FR 5** | Setiap kali pengguna membetulkan hasil AI, sistem menyimpan nilai sebelum dan sesudah dibetulkan sebagai bahan untuk mengukur dan memperbaiki akurasi AI. |
+| **FR 6** | Pengguna bisa mencatat lewat suara: rekam, lalu suaranya diubah jadi teks, lalu diproses dengan cara yang sama seperti FR 3–FR 4. |
+| **FR 7** | Sistem menyediakan form isian biasa yang selalu tersedia dan tetap berfungsi walaupun layanan AI sedang mati. |
+| **FR 8** | Pengguna bisa melihat, mengubah, dan menghapus transaksi yang sudah tersimpan, serta menyaringnya berdasarkan tanggal, kategori, dompet, dan jenis transaksi. |
+| **FR 9** | Sistem menyediakan kategori bawaan yang sesuai untuk mahasiswa (Makan, Transport, Kos, Kuliah, Hiburan, Kesehatan, Lain-lain), dan pengguna bisa menambah, mengubah, atau menonaktifkan kategori. |
+| **FR 10** | Sistem mendukung beberapa dompet sekaligus (tunai, rekening bank, e-wallet). Saldo tiap dompet dihitung otomatis dari transaksinya. |
+| **FR 11** | Pengguna bisa menetapkan batas pengeluaran per kategori untuk tiap minggu atau bulan, lengkap dengan indikator seberapa banyak yang sudah terpakai. |
+| **FR 12** | Sistem menampilkan halaman ringkasan berisi total saldo, total pemasukan dan pengeluaran periode berjalan, pembagian pengeluaran per kategori, dan grafik tren harian. |
+| **FR 13** | Sistem membuat ringkasan pola pengeluaran mingguan dalam bahasa yang mudah dipahami, disertai minimal satu saran anggaran yang jelas dan bisa langsung dijalankan. |
+| **FR 14** | Sistem mendeteksi pengeluaran yang tidak wajar (nominal atau frekuensi kategori yang jauh berbeda dari kebiasaan pengguna) lalu memberi peringatan. |
+| **FR 15** | Pengguna bisa mengunduh riwayat transaksinya dalam bentuk file CSV untuk rentang tanggal yang dipilih. |
+| **FR 16** | Aplikasi berjalan sebagai PWA yang bisa dipasang di layar utama HP. Transaksi tetap bisa dicatat saat tidak ada internet, lalu otomatis tersinkron saat koneksi kembali. |
+| **FR 17** | Data tiap pengguna terpisah dan terkunci: seorang pengguna hanya bisa mengakses datanya sendiri. Pembatasan ini diterapkan langsung di tingkat basis data lewat Row Level Security. |
+
+### e. Entity relationship diagram
+
+```mermaid
+erDiagram
+    USERS ||--o{ WALLETS : "memiliki"
+    USERS ||--o{ CATEGORIES : "mendefinisikan"
+    USERS ||--o{ TRANSACTIONS : "mencatat"
+    USERS ||--o{ BUDGETS : "menetapkan"
+    USERS ||--o{ INSIGHTS : "menerima"
+    WALLETS ||--o{ TRANSACTIONS : "menjadi sumber"
+    CATEGORIES ||--o{ TRANSACTIONS : "mengklasifikasi"
+    CATEGORIES ||--o{ BUDGETS : "dibatasi oleh"
+    TRANSACTIONS ||--o| AI_EXTRACTIONS : "berasal dari"
+
+    USERS {
+        uuid id PK
+        string email UK
+        string full_name
+        string avatar_url
+        string currency "default IDR"
+        string timezone
+        timestamp created_at
+    }
+    WALLETS {
+        uuid id PK
+        uuid user_id FK
+        string name
+        enum type "cash|bank|ewallet"
+        bigint initial_balance
+        boolean is_archived
+        timestamp created_at
+    }
+    CATEGORIES {
+        uuid id PK
+        uuid user_id FK
+        string name
+        enum kind "income|expense"
+        string icon
+        string color
+        boolean is_default
+        boolean is_archived
+    }
+    TRANSACTIONS {
+        uuid id PK
+        uuid user_id FK
+        uuid wallet_id FK
+        uuid category_id FK
+        bigint amount "rupiah, bilangan bulat"
+        enum type "income|expense"
+        string description
+        date occurred_at
+        enum source "text|voice|manual"
+        timestamp created_at
+        timestamp updated_at
+    }
+    AI_EXTRACTIONS {
+        uuid id PK
+        uuid transaction_id FK
+        text raw_input
+        enum input_mode "text|voice"
+        jsonb parsed_result
+        jsonb user_corrections
+        float confidence
+        string model_version
+        int latency_ms
+        timestamp created_at
+    }
+    BUDGETS {
+        uuid id PK
+        uuid user_id FK
+        uuid category_id FK
+        bigint amount_limit
+        enum period "weekly|monthly"
+        date start_date
+        boolean is_active
+    }
+    INSIGHTS {
+        uuid id PK
+        uuid user_id FK
+        enum kind "weekly_summary|anomaly|budget_recommendation"
+        text content
+        jsonb payload
+        boolean is_read
+        timestamp generated_at
+    }
+```
+
+### f. Low-fidelity wireframe
+
+Wireframe dibuat untuk 4 layar. Tiga layar pertama adalah alur paling penting dalam aplikasi, sedangkan layar keempat adalah tampilan pertama yang dilihat pengguna baru.
+
+| No | Layar | Isi Utama |
+|---|---|---|
+| 1 | **Dashboard** | Total saldo, ringkasan pemasukan/pengeluaran, pembagian pengeluaran per kategori, daftar transaksi terbaru, dan kolom input transaksi yang menempel di atas menu bawah |
+| 2 | **Kartu Konfirmasi AI** | Kalimat asli dari pengguna, hasil baca AI dalam 5 baris (nominal, jenis, kategori, dompet, tanggal) yang tiap barisnya bisa langsung dibetulkan, serta tombol Batal dan Simpan |
+| 3 | **Laporan & Anggaran** | Grafik tren pengeluaran harian, indikator pemakaian anggaran per kategori, kartu ringkasan dari AI, dan tombol Ekspor CSV |
+| 4 | **Perkenalan Awal** | Logo, tagline, contoh alur "kalimat → data transaksi", tiga poin keunggulan, dan tombol mulai/masuk |
+
+### g. Gantt-Chart pengerjaan proyek dalam kurun waktu 1 semester
+
+| Kegiatan | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
+|---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
+| Brainstorming & riset masalah | █ | █ | | | | | | | | | | |
+| Analisis pesaing & validasi ide | | █ | █ | | | | | | | | | |
+| Perancangan SDLC (use case, FR, ERD) | | | █ | █ | | | | | | | | |
+| Desain UI/UX (Lo-Fi → Hi-Fi) | | | | █ | █ | | | | | | | |
+| Setup repo, CI/CD & papan Kanban | | | | █ | | | | | | | | |
+| Iterasi 1 — Auth, basis data, CRUD manual | | | | | █ | █ | | | | | | |
+| Iterasi 2 — AI baca teks & kartu konfirmasi | | | | | | █ | █ | █ | | | | |
+| Iterasi 3 — Dashboard, anggaran, laporan | | | | | | | | █ | █ | | | |
+| Iterasi 4 — Input suara & PWA/offline | | | | | | | | | █ | █ | | |
+| Iterasi 5 — Ringkasan AI & deteksi anomali | | | | | | | | | | █ | █ | |
+| Pengujian (tes otomatis, uji ke pengguna) | | | | | | | █ | | | █ | █ | |
+| Rilis & pengukuran akurasi AI | | | | | | | | | | | █ | █ |
+| Dokumentasi & presentasi akhir | | | | | | | | | | | █ | █ |
+
