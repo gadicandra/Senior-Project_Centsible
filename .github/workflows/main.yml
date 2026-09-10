@@ -9,3 +9,59 @@ on:
 concurrency:
   group: ci-${{ github.ref }}
   cancel-in-progress: true
+
+env:
+  NODE_VERSION: '22'
+  PNPM_VERSION: '10'
+
+jobs:
+  quality:
+    name: Lint, Type Check, Test & Build
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v5
+
+      - id: probe
+        name: Cek apakah aplikasi sudah diinisialisasi
+        run: |
+          if [ -f package.json ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::package.json belum ada — tahap lint/test/build dilewati."
+          fi
+
+      - uses: pnpm/action-setup@v4
+        if: steps.probe.outputs.ready == 'true'
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        if: steps.probe.outputs.ready == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install dependencies
+        if: steps.probe.outputs.ready == 'true'
+        run: pnpm install --frozen-lockfile
+
+      - name: Lint
+        if: steps.probe.outputs.ready == 'true'
+        run: pnpm lint
+
+      - name: Type check
+        if: steps.probe.outputs.ready == 'true'
+        run: pnpm exec tsc --noEmit
+
+      - name: Test
+        if: steps.probe.outputs.ready == 'true'
+        run: pnpm test
+
+      - name: Build
+        if: steps.probe.outputs.ready == 'true'
+        env:
+          NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
+          NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
+        run: pnpm build
