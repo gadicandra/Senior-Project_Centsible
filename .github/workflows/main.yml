@@ -53,7 +53,7 @@ jobs:
 
       - name: Type check
         if: steps.probe.outputs.ready == 'true'
-        run: pnpm exec tsc --noEmit
+        run: pnpm typecheck
 
       - name: Test
         if: steps.probe.outputs.ready == 'true'
