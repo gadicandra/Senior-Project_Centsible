@@ -140,34 +140,59 @@ Kesederhanaan. Andalan utama aplikasi ini adalah "bisa mencatat dengan klik pali
 
 ---
 
-## Metodologi SDLC
+## 🔧 Metodologi SDLC
 
-### Metodologi yang digunakan
+### Metodologi yang Digunakan
 
-**Agile — Scrumban**
+**Agile — Scrumban** (gabungan Scrum dan Kanban: jadwal rutin dan pertemuan rutin diambil dari Scrum, papan kerja dan batas jumlah tugas diambil dari Kanban)
 
-Scrumban adalah gabungan Scrum dan Kanban: jadwal dan pertemuan rutin diambil dari Scrum, sedangkan papan kerja dan batas jumlah tugas diambil dari Kanban.
+### Alasan Pemilihan Metodologi
 
-### Alasan pemilihan metodologi
+1. **Waktu luang tim naik-turun dan sulit ditebak — ini alasan utamanya.** Kami bertiga mahasiswa aktif yang juga punya tugas besar mata kuliah lain, praktikum, dan UTS/UAS. Scrum murni mengharuskan tim berjanji menyelesaikan sejumlah tugas dalam satu sprint. Janji itu baru masuk akal kalau waktu luang tiap minggu kira-kira sama. Pada tim kami, waktu luang bisa tiba-tiba habis karena deadline mata kuliah lain, jadi sprint yang gagal bukan karena cara kerjanya salah, tapi karena jadwal kuliah. Kalau targetnya sering meleset, angka kecepatan tim jadi tidak berguna untuk merencanakan sprint berikutnya. Scrumban membuang janji sprint tadi. Sebagai gantinya, tugas **diambil sendiri** oleh anggota saat dia benar-benar punya waktu, bukan **dibagikan di awal** berdasarkan tebakan.
 
-**1. Waktu luang tim naik-turun dan sulit ditebak — ini alasan utamanya.**
-Kami bertiga mahasiswa aktif yang juga punya tugas besar mata kuliah lain, praktikum, dan UTS/UAS. Scrum murni mengharuskan tim berjanji menyelesaikan sejumlah tugas dalam satu sprint, dan janji itu baru masuk akal kalau waktu luang tiap minggu kira-kira sama. Pada tim kami, waktu luang bisa tiba-tiba habis karena deadline mata kuliah lain, sehingga sprint yang gagal bukan karena cara kerjanya salah, tapi karena jadwal kuliah. Akibatnya angka kecepatan tim jadi tidak berguna untuk merencanakan sprint berikutnya. Scrumban membuang janji sprint tadi dan menggantinya dengan alur berkelanjutan: tugas **diambil sendiri** oleh anggota saat dia benar-benar punya waktu, bukan **dibagikan di awal** berdasarkan tebakan.
+2. **Bagian AI-nya belum bisa dipastikan dari awal.** Fitur andalan Centsible adalah AI yang mengubah kalimat bebas seperti *"beli bensin gocap"* jadi data transaksi. Seberapa akurat AI-nya baru ketahuan setelah dicoba dan diukur, lalu diperbaiki berulang kali. Karena itu Waterfall tidak cocok — Waterfall mengunci spesifikasi sebelum kami punya bukti. Pekerjaan coba-coba seperti ini juga sulit ditebak lamanya, jadi makin tidak cocok dipaksa masuk sprint dengan target tetap.
 
-**2. Bagian AI-nya belum bisa dipastikan dari awal.**
-Seberapa akurat AI membaca kalimat seperti *"beli bensin gocap"* baru ketahuan setelah dicoba dan diukur, lalu diperbaiki berulang kali. Karena itu Waterfall tidak cocok — Waterfall mengunci spesifikasi sebelum kami punya bukti. Pekerjaan coba-coba seperti ini juga sulit ditebak lamanya, jadi makin tidak cocok dipaksa masuk sprint dengan target tetap.
+3. **Prioritas harus bisa diubah kapan saja.** Di Scrum, daftar tugas dikunci selama sprint berjalan. Padahal hasil uji coba ke pengguna atau hasil pengukuran akurasi AI bisa mengubah prioritas di tengah jalan, dan menunggu sprint berikutnya berarti membuang waktu yang sudah sempit. Di Scrumban, urutan tugas boleh diatur ulang kapan saja selama tugasnya belum mulai dikerjakan.
 
-**3. Prioritas harus bisa diubah kapan saja.**
-Di Scrum, daftar tugas dikunci selama sprint berjalan. Padahal hasil uji coba ke pengguna atau hasil pengukuran akurasi AI bisa mengubah prioritas di tengah jalan, dan menunggu sprint berikutnya berarti membuang waktu yang sudah sempit. Di Scrumban, urutan tugas boleh diatur ulang kapan saja selama tugasnya belum mulai dikerjakan.
+4. **Batas jumlah tugas menjaga pekerjaan tetap selesai.** Karena tidak ada deadline sprint, ada risiko pekerjaan jadi mengambang. Kanban mengatasinya bukan dengan deadline, tapi dengan **batas jumlah tugas yang boleh dikerjakan bersamaan**: satu orang tidak boleh ambil tugas baru sebelum tugasnya yang sekarang selesai. Untuk tim yang perhatiannya terbagi dengan mata kuliah lain, aturan ini lebih ampuh daripada deadline karena mencegah kebiasaan "mulai empat fitur, tidak ada satu pun yang kelar" — kegagalan yang paling sering terjadi di proyek mahasiswa.
+
+5. **Hasil dirilis bertahap dan tetap berguna.** Tiap tahap sudah bisa dipakai sendiri: form manual dulu, lalu input teks dengan AI, lalu input suara, lalu fitur insight. Kalau ada satu fitur yang terpaksa dilepas karena kehabisan waktu, aplikasinya tetap utuh dan tetap bisa didemokan.
+
+6. **Cocok dengan alat yang kami pakai.** Papan `Backlog → Ready → In Progress → In Review → Done` di GitHub Project itu memang papan Kanban. Dengan memakai Scrumban, cara kerja yang kami tulis di dokumen sama persis dengan alat yang benar-benar kami pakai sehari-hari.
+
+### Cara Kerja Tim
+
+**Bagian yang diambil dari Kanban:**
+
+| Unsur | Penerapan |
+|---|---|
+| Papan kerja | GitHub Project dengan kolom `Backlog → Ready → In Progress → In Review → Done` |
+| Batas jumlah tugas (WIP limit) | Maksimal **2 kartu** per orang di kolom *In Progress*; maksimal **4 kartu** untuk satu tim di kolom *In Review* |
+| Ambil sendiri (*pull*) | Anggota mengambil kartu paling atas dari kolom *Ready* saat dia sedang punya waktu — tidak ada pembagian tugas paksa di awal |
+| Syarat siap dikerjakan (*Definition of Ready*) | Kartu boleh masuk kolom *Ready* kalau tujuannya sudah jelas, tugas yang jadi syaratnya sudah selesai, dan ukurannya cukup kecil untuk selesai dalam ±1 minggu |
+| Syarat selesai (*Definition of Done*) | Kode sudah digabung ke `main`, CI hijau, sudah dites, dan dokumentasinya sudah diperbarui |
+
+**Bagian yang diambil dari Scrum:**
+
+| Unsur | Penerapan |
+|---|---|
+| Ritme tetap | Siklus **1 minggu**, mengikuti jadwal pertemuan praktikum supaya ritme proyek tidak bergantung pada kedisiplinan tambahan |
+| Rapat isi ulang tugas | Tiap minggu, untuk mengisi kolom *Ready* dan menata ulang urutan prioritas |
+| Review | Demo hasil kerja yang sudah selesai di tiap pertemuan mingguan |
+| Retrospective | Evaluasi cara kerja tiap 2 minggu, fokus mencari apa yang menghambat, bukan menghitung target tercapai atau tidak |
+| Laporan harian tanpa rapat | Update lewat komentar di issue GitHub, karena rapat harian tidak realistis dengan jadwal kuliah yang berbeda-beda |
+
+**Yang kami pantau:** *cycle time* (berapa lama satu kartu dari mulai dikerjakan sampai selesai) dan *throughput* (berapa kartu yang selesai per minggu). Keduanya dipakai menggantikan *velocity* karena tetap berguna walaupun waktu luang tim naik-turun.
 
 ---
 
-## Perancangan Tahap 1–3 SDLC
+## 📐 Perancangan Tahap 1–3 SDLC
 
-### a. Tujuan dari produk
+### a. Tujuan Produk
 
 Membuat pencatatan keuangan harian mahasiswa jadi jauh lebih ringan: dari sekitar 8 langkah (20–40 detik) per transaksi menjadi **satu kalimat + satu kali ketuk untuk konfirmasi**. Dengan begitu kebiasaan mencatat bisa bertahan lama, datanya terkumpul cukup banyak, lalu diolah jadi ringkasan pola pengeluaran dan saran anggaran yang bisa langsung dijalankan.
 
-Target terukur sampai akhir semester:
+Tujuan terukur (target akhir semester):
 
 | Tujuan | Indikator |
 |---|---|
@@ -176,19 +201,95 @@ Target terukur sampai akhir semester:
 | Penggunanya bertahan | ≥ 60% pengguna uji coba masih mencatat sampai hari ke-14 |
 | Datanya berguna | Tiap pengguna aktif dapat ringkasan mingguan & minimal 1 saran anggaran yang jelas |
 
-### b. Pengguna potensial dari produk dan kebutuhan para pengguna tersebut
+### b. Pengguna Potensial dan Kebutuhannya
 
-| Kelompok Pengguna | Karakteristik | Kebutuhan Utama |
+| Segmen Pengguna | Karakteristik | Kebutuhan Utama |
 |---|---|---|
-| **Mahasiswa perantau** (pengguna utama) | Dapat uang saku bulanan/mingguan dari orang tua, 5–10 transaksi kecil per hari (makan, kos, transport, jajan) | Ingin tahu uangnya cukup atau tidak sampai kiriman berikutnya; ingin mencatat tanpa harus berhenti dari kegiatan yang sedang dilakukan |
+| **Mahasiswa perantau (pengguna utama)** | Dapat uang saku bulanan/mingguan dari orang tua, 5–10 transaksi kecil per hari (makan, kos, transport, jajan) | Ingin tahu uangnya cukup atau tidak sampai kiriman berikutnya; ingin mencatat tanpa harus berhenti dari kegiatan yang sedang dilakukan |
 | **Mahasiswa yang punya penghasilan sendiri** (freelance, part-time, asisten praktikum) | Pemasukan tidak tetap dan waktunya tidak menentu, pengeluaran pribadi bercampur dengan keperluan kerja | Ingin memisahkan pengeluaran per kategori, melihat uang masuk dan keluar tiap periode, dan tahu bulan mana yang boncos |
 | **Mahasiswa yang sedang menabung** | Sedang mengumpulkan uang untuk laptop, KKN, atau jalan-jalan | Ingin menetapkan batas pengeluaran per kategori, dapat peringatan kalau boros, dan tahu perkiraan kapan target tabungannya tercapai |
+| **Bendahara kelompok/organisasi** (pengguna tambahan) | Mengurus uang kas kegiatan yang nanti harus dilaporkan | Ingin mencatat cepat saat di lapangan, dan punya riwayat lengkap yang bisa dicek ulang serta diunduh |
 
-### c. Use case diagram
+Ada tiga kebutuhan yang muncul di semua kelompok pengguna dan menjadi patokan seluruh desain: **mencatat harus bisa dilakukan sambil berdiri di kasir**, **data harus bisa dibetulkan**, dan **AI tidak boleh menyimpan apa pun tanpa persetujuan pengguna**.
 
-<img width="7454" height="8192" alt="AMP Transaksi Data-2026-09-10-111548" src="https://github.com/user-attachments/assets/f0b263f3-0fc7-44a6-b2cf-db1aacf18778" />
+### c. Use Case Diagram
 
-### d. Functional requirements untuk use case yang telah dirancang
+<pre class="mermaid">
+flowchart LR
+    U(("👤 Mahasiswa<br/>(Pengguna)"))
+
+    subgraph SYS["Sistem Centsible"]
+        direction TB
+
+        subgraph G1["Akses"]
+            UC1(["UC-01 Registrasi &amp; Login"])
+            UC14(["UC-14 Instal PWA &amp; akses offline"])
+        end
+
+        subgraph G2["Mencatat Transaksi"]
+            UC2(["UC-02 Catat transaksi lewat teks biasa"])
+            UC3(["UC-03 Catat transaksi lewat suara"])
+            UC4(["UC-04 Catat transaksi lewat form manual"])
+            UCT(["UC-T Ubah suara jadi teks"])
+            UCX(["UC-X AI membaca isi transaksi"])
+            UC5(["UC-05 Cek &amp; betulkan hasil baca AI"])
+        end
+
+        subgraph G3["Mengelola Data"]
+            UC6(["UC-06 Kelola transaksi (ubah/hapus)"])
+            UC7(["UC-07 Kelola kategori &amp; dompet"])
+            UC8(["UC-08 Menetapkan anggaran per kategori"])
+            UC13(["UC-13 Ekspor data (CSV)"])
+        end
+
+        subgraph G4["Melihat Hasil &amp; Saran"]
+            UC9(["UC-09 Melihat dashboard &amp; laporan"])
+            UC10(["UC-10 Terima ringkasan mingguan"])
+            UC11(["UC-11 Terima saran anggaran"])
+            UC12(["UC-12 Terima peringatan pengeluaran tidak wajar"])
+        end
+    end
+
+    S(("🔐 Layanan Auth<br/>(Supabase)"))
+    A(("🤖 AI Agent<br/>(LLM Provider)"))
+
+    U --- UC1
+    U --- UC14
+    U --- UC2
+    U --- UC3
+    U --- UC4
+    U --- UC5
+    U --- UC6
+    U --- UC7
+    U --- UC8
+    U --- UC13
+    U --- UC9
+    U --- UC10
+    U --- UC11
+    U --- UC12
+
+    UC1 -.->|"&lt;&lt;include&gt;&gt;"| S
+    UC2 -.->|"&lt;&lt;include&gt;&gt;"| UCX
+    UC3 -.->|"&lt;&lt;include&gt;&gt;"| UCT
+    UCT -.->|"&lt;&lt;include&gt;&gt;"| UCX
+    UCX -.->|"&lt;&lt;include&gt;&gt;"| UC5
+    UC4 -.->|"&lt;&lt;extend&gt;&gt;"| UC5
+    UCX -.->|"&lt;&lt;include&gt;&gt;"| A
+    UC10 -.->|"&lt;&lt;include&gt;&gt;"| A
+    UC11 -.->|"&lt;&lt;include&gt;&gt;"| A
+    UC12 -.->|"&lt;&lt;include&gt;&gt;"| A
+
+    classDef actor fill:#1f2937,stroke:#111827,stroke-width:2px,color:#f9fafb
+    classDef usecase fill:#eef2ff,stroke:#4f46e5,stroke-width:1.5px,color:#1e1b4b
+    classDef internal fill:#fef3c7,stroke:#d97706,stroke-width:1.5px,color:#451a03
+    class U,A,S actor
+    class UC1,UC2,UC3,UC4,UC5,UC6,UC7,UC8,UC9,UC10,UC11,UC12,UC13,UC14 usecase
+    class UCX,UCT internal
+</pre>
+
+> Catatan: UC-04 (form manual) adalah jalur cadangan kalau AI gagal atau pengguna ingin mengisi sendiri. Semua cara input — teks, suara, maupun manual — sama-sama berakhir di UC-05 (konfirmasi), jadi **tidak ada transaksi yang tersimpan tanpa disetujui pengguna**.
+
+### d. Functional Requirements
 
 | FR | Deskripsi |
 |---|---|
@@ -210,9 +311,9 @@ Target terukur sampai akhir semester:
 | **FR 16** | Aplikasi berjalan sebagai PWA yang bisa dipasang di layar utama HP. Transaksi tetap bisa dicatat saat tidak ada internet, lalu otomatis tersinkron saat koneksi kembali. |
 | **FR 17** | Data tiap pengguna terpisah dan terkunci: seorang pengguna hanya bisa mengakses datanya sendiri. Pembatasan ini diterapkan langsung di tingkat basis data lewat Row Level Security. |
 
-### e. Entity relationship diagram
+### e. Entity Relationship Diagram
 
-```mermaid
+<pre class="mermaid">
 erDiagram
     USERS ||--o{ WALLETS : "memiliki"
     USERS ||--o{ CATEGORIES : "mendefinisikan"
@@ -257,7 +358,7 @@ erDiagram
         uuid user_id FK
         uuid wallet_id FK
         uuid category_id FK
-        bigint amount "rupiah, bilangan bulat"
+        bigint amount "minor unit (rupiah)"
         enum type "income|expense"
         string description
         date occurred_at
@@ -295,34 +396,61 @@ erDiagram
         boolean is_read
         timestamp generated_at
     }
-```
+</pre>
 
-### f. Low-fidelity wireframe
+**Beberapa keputusan penting pada rancangan basis data:**
 
-Wireframe dibuat untuk 4 layar. Tiga layar pertama adalah alur paling penting dalam aplikasi, sedangkan layar keempat adalah tampilan pertama yang dilihat pengguna baru.
+- Nominal (`transactions.amount`) disimpan sebagai bilangan bulat rupiah (`bigint`), bukan bilangan desimal (`float`). Bilangan desimal rawan salah pembulatan, dan pada aplikasi keuangan selisih kecil pun tidak bisa ditoleransi.
+- Saldo dompet **tidak** disimpan sebagai angka tersendiri, tapi selalu dihitung dari saldo awal + seluruh transaksinya. Dengan begitu saldo tidak mungkin berbeda dari riwayat transaksinya.
+- Tabel `ai_extractions` sengaja dipisah dari `transactions` karena fungsinya beda: `transactions` adalah data milik pengguna, sedangkan `ai_extractions` adalah catatan kerja AI untuk bahan evaluasi. Kolom `user_corrections` di situlah yang dipakai mengukur dan memperbaiki akurasi AI (FR 5).
+- Kategori yang tidak dipakai lagi hanya ditandai nonaktif (`is_archived`), bukan benar-benar dihapus. Kalau dihapus, transaksi lama akan kehilangan kategorinya.
 
-| No | Layar | Isi Utama |
-|---|---|---|
-| 1 | **Dashboard** | Total saldo, ringkasan pemasukan/pengeluaran, pembagian pengeluaran per kategori, daftar transaksi terbaru, dan kolom input transaksi yang menempel di atas menu bawah |
-| 2 | **Kartu Konfirmasi AI** | Kalimat asli dari pengguna, hasil baca AI dalam 5 baris (nominal, jenis, kategori, dompet, tanggal) yang tiap barisnya bisa langsung dibetulkan, serta tombol Batal dan Simpan |
-| 3 | **Laporan & Anggaran** | Grafik tren pengeluaran harian, indikator pemakaian anggaran per kategori, kartu ringkasan dari AI, dan tombol Ekspor CSV |
-| 4 | **Perkenalan Awal** | Logo, tagline, contoh alur "kalimat → data transaksi", tiga poin keunggulan, dan tombol mulai/masuk |
+### f. Low-fidelity Wireframe
 
-### g. Gantt-Chart pengerjaan proyek dalam kurun waktu 1 semester
+<pre class="mermaid">
+flowchart TD
+    subgraph W1["① Dashboard (Home)"]
+        direction TB
+        A1["┌──────────────────────────────┐<br/>│  Halo, Adi          [profil]  │<br/>│                               │<br/>│   SALDO TOTAL                 │<br/>│   Rp 1.240.000                │<br/>│   ▲ masuk 500rb  ▼ keluar 260rb│<br/>│                               │<br/>│  [ Pengeluaran per kategori ] │<br/>│  ▓▓▓▓▓▓▓▓ Makan      45%      │<br/>│  ▓▓▓▓▓ Transport     28%      │<br/>│  ▓▓▓ Jajan           17%      │<br/>│                               │<br/>│  Transaksi terbaru            │<br/>│  • Bensin        -Rp 50.000   │<br/>│  • Makan siang   -Rp 18.000   │<br/>│                               │<br/>│  ╭─────────────────────────╮  │<br/>│  │ Ketik transaksi…    🎤 │  │<br/>│  ╰─────────────────────────╯  │<br/>│  [🏠] [📊] [＋] [🎯] [⚙]      │<br/>└──────────────────────────────┘"]
+    end
+
+    subgraph W2["② Kartu Konfirmasi AI"]
+        direction TB
+        A2["┌──────────────────────────────┐<br/>│  ‟beli bensin gocap”          │<br/>│                               │<br/>│  ┌─ Hasil baca AI ──────────┐ │<br/>│  │ Nominal    Rp 50.000  ✎  │ │<br/>│  │ Jenis      Pengeluaran ✎ │ │<br/>│  │ Kategori   Transport   ✎ │ │<br/>│  │ Dompet     Tunai       ✎ │ │<br/>│  │ Tanggal    Hari ini    ✎ │ │<br/>│  └──────────────────────────┘ │<br/>│                               │<br/>│  [ Batal ]    [ SIMPAN ✓ ]    │<br/>│  ↳ Ubah ke form manual        │<br/>└──────────────────────────────┘"]
+    end
+
+    subgraph W3["③ Laporan & Anggaran"]
+        direction TB
+        A3["┌──────────────────────────────┐<br/>│  ‹ Sep 2026 ›     [Minggu|Bulan]│<br/>│  ▁▃▅▂▇▄▁ tren harian          │<br/>│                               │<br/>│  ANGGARAN                     │<br/>│  Makan     ▓▓▓▓▓▓░░ 620/800rb │<br/>│  Transport ▓▓▓▓▓▓▓▓ 310/300rb⚠│<br/>│                               │<br/>│  ╭ Ringkasan AI ─────────────╮│<br/>│  │ Transport naik 40% dari   ││<br/>│  │ rata-rata 4 minggu lalu.  ││<br/>│  │ Saran: naikkan pagu ke    ││<br/>│  │ Rp 350rb atau kurangi 2   ││<br/>│  │ perjalanan/minggu.        ││<br/>│  ╰───────────────────────────╯│<br/>│  [ Ekspor CSV ]               │<br/>└──────────────────────────────┘"]
+    end
+
+    W1 -->|"kirim input teks/suara"| W2
+    W2 -->|"simpan ✓"| W1
+    W1 -->|"tab 📊"| W3
+    W3 -->|"kembali"| W1
+</pre>
+
+Tiga layar di atas adalah alur paling penting dalam aplikasi. Dua hal yang dijaga: kolom input selalu berada di posisi yang mudah dijangkau ibu jari di semua layar, dan kartu konfirmasi tidak pernah bisa dilewati lewat jalur mana pun.
+
+### g. Gantt-Chart Pengerjaan Proyek (1 Semester / 12 Pertemuan)
 
 | Kegiatan | 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8 | 9 | 10 | 11 | 12 |
 |---|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|:-:|
-| Brainstorming & riset masalah | █ | █ | | | | | | | | | | |
-| Analisis pesaing & validasi ide | | █ | █ | | | | | | | | | |
-| Perancangan SDLC (use case, FR, ERD) | | | █ | █ | | | | | | | | |
-| Desain UI/UX (Lo-Fi → Hi-Fi) | | | | █ | █ | | | | | | | |
-| Setup repo, CI/CD & papan Kanban | | | | █ | | | | | | | | |
-| Iterasi 1 — Auth, basis data, CRUD manual | | | | | █ | █ | | | | | | |
-| Iterasi 2 — AI baca teks & kartu konfirmasi | | | | | | █ | █ | █ | | | | |
-| Iterasi 3 — Dashboard, anggaran, laporan | | | | | | | | █ | █ | | | |
-| Iterasi 4 — Input suara & PWA/offline | | | | | | | | | █ | █ | | |
-| Iterasi 5 — Ringkasan AI & deteksi anomali | | | | | | | | | | █ | █ | |
-| Pengujian (tes otomatis, uji ke pengguna) | | | | | | | █ | | | █ | █ | |
-| Rilis & pengukuran akurasi AI | | | | | | | | | | | █ | █ |
-| Dokumentasi & presentasi akhir | | | | | | | | | | | █ | █ |
+| Brainstorming & riset masalah | █ | █ |  |  |  |  |  |  |  |  |  |  |
+| Analisis kompetitor & validasi ide |  | █ | █ |  |  |  |  |  |  |  |  |  |
+| Perancangan SDLC (use case, FR, ERD) |  |  | █ | █ |  |  |  |  |  |  |  |  |
+| Desain UI/UX (Lo-Fi → Hi-Fi) |  |  |  | █ | █ |  |  |  |  |  |  |  |
+| Setup repositori, CI/CD & papan Kanban |  |  |  | █ |  |  |  |  |  |  |  |  |
+| Iterasi 1 — Auth, skema DB, CRUD manual |  |  |  |  | █ | █ |  |  |  |  |  |  |
+| Iterasi 2 — AI baca teks & konfirmasi |  |  |  |  |  | █ | █ | █ |  |  |  |  |
+| Iterasi 3 — Dashboard, anggaran, laporan |  |  |  |  |  |  |  | █ | █ |  |  |  |
+| Iterasi 4 — Voice input & PWA/offline |  |  |  |  |  |  |  |  | █ | █ |  |  |
+| Iterasi 5 — Insight & deteksi anomali |  |  |  |  |  |  |  |  |  | █ | █ |  |
+| Pengujian (unit, integrasi, UAT) |  |  |  |  |  |  | █ |  |  | █ | █ |  |
+| Deployment & evaluasi akurasi model |  |  |  |  |  |  |  |  |  |  | █ | █ |
+| Dokumentasi & presentasi akhir |  |  |  |  |  |  |  |  |  |  | █ | █ |
 
+<script type="module">
+  import mermaid from 'https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.esm.min.mjs';
+  mermaid.initialize({ startOnLoad: true, theme: 'neutral', securityLevel: 'loose' });
+</script>
