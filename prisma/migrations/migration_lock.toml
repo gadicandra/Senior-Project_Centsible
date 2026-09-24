@@ -1,0 +1,4 @@
+# Berkas ini dibuat oleh Prisma Migrate dan tidak boleh diubah manual.
+# Berkas ini WAJIB ikut di-commit.
+
+provider = "postgresql"
