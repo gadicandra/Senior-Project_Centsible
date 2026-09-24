@@ -49,10 +49,10 @@ Dokumen ini menjelaskan **bagian apa saja yang membentuk Centsible, di mana tiap
 
 ### 0.1 Kenapa aman untuk pindah nanti
 
-Semua pemanggilan AI sudah dibungkus di `lib/ai/` (P3, ADR-04). Route Handler `/api/ai/parse` dan `/api/ai/transcribe` **tidak tahu** penyedianya; yang dipilih lewat env var:
+Semua pemanggilan AI sudah dibungkus di `src/server/ai/` (P3, ADR-04). Route Handler `/api/ai/parse` dan `/api/ai/transcribe` **tidak tahu** penyedianya; yang dipilih lewat env var:
 
 ```ts
-// lib/ai/index.ts — satu-satunya tempat yang tahu penyedia AI
+// src/server/ai/index.ts — satu-satunya tempat yang tahu penyedia AI
 export interface TextParser {
   parse(input: string, ctx: UserAiContext): Promise<ParsedTransaction>; // hasil sudah lolos Zod
 }
@@ -291,12 +291,12 @@ flowchart TB
         PROXY["proxy.ts<br/>refresh sesi Supabase<br/>+ redirect jika belum login"]
         SA["Server Actions<br/>simpanTransaksi, ubah, hapus,<br/>kelola kategori/dompet/anggaran"]
         RH["Route Handlers<br/>/api/ai/parse<br/>/api/ai/transcribe<br/>/api/export/csv<br/>/api/sync"]
-        subgraph DOMAIN["lib/ (logika inti — tanpa framework)"]
+        subgraph DOMAIN["server/services + server/ai (logika inti)"]
             SVC_AI["ai/<br/>parser, transcriber,<br/>prompt, skema"]
             SVC_TX["transactions/<br/>validasi, saldo, filter"]
             SVC_IN["insights/<br/>anomali, ringkasan"]
         end
-        DATA["lib/db<br/>Prisma + wrapper RLS"]
+        DATA["server/db<br/>Prisma + wrapper RLS"]
     end
 
     UI --> SA
@@ -321,33 +321,54 @@ flowchart TB
 
 ### 5.2 Struktur Folder
 
+Semua kode aplikasi ada di `src/` (konfigurasi, `public/`, `prisma/` tetap di root). Aturannya:
+
+- **`src/app/` hanya berisi file konvensi Next.js** (`page.tsx`, `layout.tsx`, `loading.tsx`, `route.ts`, …) yang **tipis**: membaca params/sesi, memanggil backend, lalu merender komponen. Tidak ada markup besar atau logika bisnis di sini.
+- **Frontend** = `src/components/` (UI). **Backend** = `src/server/` (hanya jalan di server, ditandai `import "server-only"` sehingga build gagal kalau ter-*import* ke Client Component).
+- Komponen **tidak boleh** mengimpor `@/server/*` kecuali `@/server/actions` — dijaga aturan ESLint `no-restricted-imports` di `eslint.config.mjs`. Data masuk ke komponen lewat **props** dari `page.tsx`, atau lewat **Server Action**.
+- `src/lib/` untuk kode netral yang aman dipakai di kedua sisi (skema Zod, formatter rupiah, konstanta).
+
 ```text
-app/
-├── (auth)/login, register, reset-password/
-├── (app)/
-│   ├── page.tsx                 # Dashboard (FR 12)
-│   ├── transaksi/               # Daftar + filter (FR 8)
-│   ├── laporan/                 # Tren + anggaran (FR 11, 12)
-│   └── pengaturan/              # Kategori, dompet, akun (FR 1, 9, 10)
-├── api/
-│   ├── ai/parse/route.ts        # Jalur teks → JSON (FR 2, 3)
-│   ├── ai/transcribe/route.ts   # Jalur suara → teks (FR 6)
-│   ├── export/csv/route.ts      # FR 15
-│   └── sync/route.ts            # Sinkronisasi antrean offline (FR 16)
-├── manifest.ts                  # PWA manifest (FR 16)
-proxy.ts                         # Next 16: pengganti middleware.ts
-lib/
-├── ai/          # client Azure OpenAI, prompt, skema JSON, normalisasi nominal
-├── db/          # Prisma client + withRls()
-├── supabase/    # client.ts, server.ts, proxy.ts (pola resmi @supabase/ssr)
-├── transactions/
-└── insights/
+src/
+├── app/                              # ROUTING SAJA — file tipis
+│   ├── layout.tsx                    # → <RootShell>
+│   ├── page.tsx                      # → <HomeHero> / dashboard
+│   ├── (auth)/login, register, reset-password/page.tsx
+│   ├── (app)/
+│   │   ├── page.tsx                  # Dashboard (FR 12)
+│   │   ├── transaksi/page.tsx        # Daftar + filter (FR 8)
+│   │   ├── laporan/page.tsx          # Tren + anggaran (FR 11, 12)
+│   │   └── pengaturan/page.tsx       # Kategori, dompet, akun (FR 1, 9, 10)
+│   ├── api/                          # Route Handler → memanggil src/server/services
+│   │   ├── health/route.ts
+│   │   ├── ai/parse/route.ts         # Jalur teks → JSON (FR 2, 3)
+│   │   ├── ai/transcribe/route.ts    # Jalur suara → teks (FR 6)
+│   │   ├── export/csv/route.ts       # FR 15
+│   │   ├── sync/route.ts             # Sinkronisasi antrean offline (FR 16)
+│   │   └── cron/*/route.ts           # Fase 1: dipanggil Vercel Cron (FR 13, 14)
+│   ├── manifest.ts                   # PWA manifest (FR 16)
+│   └── globals.css
+├── components/                       # FRONTEND
+│   ├── ui/                           # Komponen dasar (button, input, card — shadcn/ui)
+│   ├── layout/                       # RootShell, font, navbar, sidebar
+│   └── <fitur>/                      # home/, transaksi/, laporan/, pengaturan/, ai-input/
+├── server/                           # BACKEND (server-only)
+│   ├── actions/                      # Server Action ("use server") — pintu masuk dari form
+│   ├── services/                     # Logika bisnis: transactions, insights, health
+│   ├── ai/                           # Provider AI (TextParser/Transcriber), prompt, normalisasi nominal
+│   ├── db/                           # Prisma client + withRls()
+│   └── supabase/                     # server.ts, proxy.ts (pola resmi @supabase/ssr)
+├── lib/                              # SHARED: skema Zod, util format, konstanta
+│   └── supabase/client.ts            # createBrowserClient (dipakai komponen client)
+└── proxy.ts                          # Next 16: pengganti middleware.ts (harus di src/ bila memakai src/)
 prisma/
 ├── schema.prisma
-└── migrations/  # termasuk SQL kebijakan RLS
+└── migrations/                       # termasuk SQL kebijakan RLS
 prisma.config.ts
-scripts/         # entry point Container Apps Job (weekly-insight, anomaly)
+scripts/                              # entry point Container Apps Job (Fase 2)
 ```
+
+Alur satu permintaan: `app/**/page.tsx` → `server/services/*` (ambil data) → props → `components/**` (render). Untuk mutasi: `components/**` → `server/actions/*` → `server/services/*` → `server/db`.
 
 ---
 
@@ -403,7 +424,7 @@ flowchart LR
 **Konfigurasi client (keyless, sesuai docs Microsoft Learn terbaru):**
 
 ```ts
-// lib/ai/client.ts
+// src/server/ai/client.ts
 import OpenAI from "openai";
 import { DefaultAzureCredential, getBearerTokenProvider } from "@azure/identity";
 
@@ -423,7 +444,7 @@ export const aoai = new OpenAI({
 **Skema keluaran (contoh, dibangun per pengguna):**
 
 ```ts
-// lib/ai/schema.ts
+// src/server/ai/schema.ts
 export function transactionSchema(categories: string[], wallets: string[]) {
   return {
     type: "object",
@@ -636,7 +657,7 @@ Prisma terhubung ke Postgres memakai *connection string* dengan role `postgres`,
 **Solusi yang dipilih: jalankan query Prisma sebagai role `authenticated` dengan klaim JWT pengguna**, di dalam satu transaksi:
 
 ```ts
-// lib/db/with-rls.ts
+// src/server/db/with-rls.ts
 export async function withRls<T>(claims: JwtClaims, fn: (tx: Tx) => Promise<T>) {
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select set_config('request.jwt.claims', ${JSON.stringify(claims)}, true)`;
@@ -721,7 +742,7 @@ Mengikuti contoh resmi `with-docker` Next.js: tahap `deps` → `builder` (`pnpm 
 
 | Nama | Contoh | Keterangan |
 |---|---|---|
-| `AI_TEXT_PROVIDER` | `anthropic` \| `openai-compatible` \| `azure` | Memilih implementasi `TextParser` di `lib/ai/` |
+| `AI_TEXT_PROVIDER` | `anthropic` \| `openai-compatible` \| `azure` | Memilih implementasi `TextParser` di `src/server/ai/` |
 | `AI_TEXT_MODEL` | `claude-opus-5` | Nama model untuk penyedia terpilih (di 9router: nama model/*combo* yang terdaftar di dashboard-nya) |
 | `ANTHROPIC_API_KEY` | — (rahasia) | Hanya jika `AI_TEXT_PROVIDER=anthropic` |
 | `AI_TEXT_BASE_URL` / `AI_TEXT_API_KEY` | `http://localhost:20128/v1` / — (rahasia) | Hanya jika `openai-compatible` (9router) |
@@ -788,7 +809,7 @@ Dua cara pengukuran yang saling melengkapi:
 | **Ketersediaan** | Aplikasi tetap bisa mencatat saat AI mati | Form manual independen + fallback otomatis; offline queue |
 | **Keamanan data** | Tidak ada kebocoran antar-pengguna | RLS di DB + `withRls()`, Managed Identity, Key Vault |
 | **Biaya** | Muat di kredit Azure for Students | Scale-to-zero di dev, Job hanya jalan saat jadwal, kuota AI per pengguna, insight pakai angka agregat |
-| **Kemudahan dirawat** | Tim 3 orang, waktu terbatas | Satu codebase, satu image untuk web + job, logika inti di `lib/` terpisah dari framework sehingga mudah dites |
+| **Kemudahan dirawat** | Tim 3 orang, waktu terbatas | Satu codebase, satu image untuk web + job, logika inti di `src/server/services` terpisah dari UI dan routing sehingga mudah dites |
 
 ---
 
@@ -821,7 +842,7 @@ Harga pasti **harus dihitung ulang dengan Azure Pricing Calculator** saat resour
 | ADR-01 | Hosting di **Azure Container Apps** | Azure App Service, Azure Static Web Apps, Vercel | Container Apps: bisa scale-to-zero, punya **Jobs** terjadwal bawaan untuk FR 13–14 (tanpa layanan cron terpisah), revision + label untuk preview per PR. Static Web Apps kurang cocok untuk Next.js dengan Server Actions & Route Handler berat. App Service tidak scale-to-zero |
 | ADR-02 | **Supabase** tetap untuk Auth + DB | Azure Database for PostgreSQL + Entra External ID | Auth + RLS berbasis JWT sudah jadi satu; menghemat waktu tim untuk FR 1 & FR 17 |
 | ADR-03 | **Azure OpenAI** untuk teks & suara dalam satu resource | OpenAI langsung, Gemini, Azure AI Speech | Satu tempat login (Managed Identity), satu tagihan (kredit Azure), dan SDK `openai` bisa dipakai langsung lewat endpoint `/openai/v1/` |
-| ADR-04 | **Whisper** untuk suara → teks | Azure AI Speech, `gpt-4o-mini-transcribe` | Sesuai keputusan tim; robust terhadap aksen & bahasa campur, mendukung `prompt` sebagai kamus slang. Karena dibungkus di `lib/ai/transcriber.ts`, penggantian model ke depan hanya menyentuh satu file |
+| ADR-04 | **Whisper** untuk suara → teks | Azure AI Speech, `gpt-4o-mini-transcribe` | Sesuai keputusan tim; robust terhadap aksen & bahasa campur, mendukung `prompt` sebagai kamus slang. Karena dibungkus di `src/server/ai/transcriber.ts`, penggantian model ke depan hanya menyentuh satu file |
 | ADR-05 | Suara diproses **dua tahap** (transkripsi → parsing) | Satu model audio → JSON | Teks bisa dikoreksi pengguna, satu jalur evaluasi, kesalahan bisa dilacak per tahap |
 | ADR-06 | **Structured Outputs `strict`** + enum per pengguna | JSON mode biasa + parsing manual | Keluaran dijamin sesuai skema; model tidak bisa mengarang kategori |
 | ADR-07 | Anomali dihitung **statistik**, bukan LLM | LLM membaca semua transaksi | Deterministik, bisa dites, murah, tidak mengirim data mentah ke AI |
