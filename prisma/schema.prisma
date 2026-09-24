@@ -1,0 +1,266 @@
+// ============================================================================
+// Centsible — Skema Prisma
+// ----------------------------------------------------------------------------
+// Sumber kebenaran struktur basis data adalah berkas SQL di prisma/migrations/.
+// Berkas ini adalah MODEL untuk Prisma Client: penamaan, tipe, dan relasi harus
+// selalu sama dengan SQL tersebut.
+//
+// PENTING — JANGAN jalankan `prisma migrate dev`.
+// Migrasi Centsible memuat objek yang tidak bisa diwakili Prisma Schema
+// (policy RLS, trigger, fungsi, view, indeks parsial, FK majemuk, CHECK).
+// `migrate dev` akan menganggapnya "drift" dan menawarkan reset database.
+// Pakai `prisma migrate deploy`. Lihat docs/database.md §13.
+//
+// Objek basis data yang sengaja TIDAK ditulis di sini (ada di SQL saja):
+//   * FK majemuk ber-tenant pada transactions, ai_extractions, budgets, insights
+//   * CHECK constraint (nominal, panjang teks, format warna, bentuk JSON)
+//   * Indeks unik parsial (dompet utama, nama aktif unik tanpa beda kapital)
+//   * RLS + policy, GRANT, trigger updated_at, trigger auth.users
+//   * View public.wallet_balances, fungsi public.consume_ai_quota()
+// ============================================================================
+
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// ---------------------------------------------------------------------------
+// Enum
+// ---------------------------------------------------------------------------
+
+/// Dipakai bersama oleh Category.kind dan Transaction.type supaya keduanya bisa
+/// diikat satu foreign key majemuk di basis data.
+enum EntryKind {
+  income
+  expense
+
+  @@map("entry_kind")
+}
+
+enum WalletType {
+  cash
+  bank
+  ewallet
+
+  @@map("wallet_type")
+}
+
+enum TransactionSource {
+  text
+  voice
+  manual
+
+  @@map("transaction_source")
+}
+
+enum AiInputMode {
+  text
+  voice
+
+  @@map("ai_input_mode")
+}
+
+enum BudgetPeriod {
+  weekly
+  monthly
+
+  @@map("budget_period")
+}
+
+enum InsightKind {
+  weekly_summary
+  anomaly
+  budget_recommendation
+
+  @@map("insight_kind")
+}
+
+// ---------------------------------------------------------------------------
+// Model
+// ---------------------------------------------------------------------------
+
+/// Profil pengguna. `id` selalu sama dengan auth.users.id dan diisi oleh
+/// trigger on_auth_user_created — aplikasi tidak pernah membuat baris ini.
+model User {
+  id        String   @id @db.Uuid
+  email     String?
+  fullName  String?  @map("full_name")
+  avatarUrl String?  @map("avatar_url")
+  currency  String   @default("IDR") @db.Char(3)
+  timezone  String   @default("Asia/Jakarta")
+  createdAt DateTime @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt DateTime @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  wallets       Wallet[]
+  categories    Category[]
+  transactions  Transaction[]
+  budgets       Budget[]
+  insights      Insight[]
+  aiExtractions AiExtraction[]
+  aiUsage       AiUsageDaily[]
+
+  @@index([email], map: "users_email_idx")
+  @@map("users")
+}
+
+/// Dompet pengguna. Saldo tidak disimpan — lihat view public.wallet_balances.
+model Wallet {
+  id             String     @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId         String     @map("user_id") @db.Uuid
+  name           String
+  type           WalletType @default(cash)
+  initialBalance BigInt     @default(0) @map("initial_balance")
+  isDefault      Boolean    @default(false) @map("is_default")
+  isArchived     Boolean    @default(false) @map("is_archived")
+  createdAt      DateTime   @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt      DateTime   @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  transactions Transaction[]
+
+  // Kunci ber-tenant, dipakai FK majemuk dari transactions.
+  @@unique([userId, id], map: "wallets_user_id_id_key")
+  @@map("wallets")
+}
+
+/// Kategori pengguna. Nama kategori aktif dipakai sebagai daftar `enum` pada
+/// skema keluaran AI (ADR-06), jadi keunikannya dijaga indeks di basis data.
+model Category {
+  id         String    @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId     String    @map("user_id") @db.Uuid
+  name       String
+  kind       EntryKind
+  icon       String?
+  color      String?
+  /// true untuk kategori bawaan hasil bootstrap_user(), bukan "kategori terpilih".
+  isSystem   Boolean   @default(false) @map("is_system")
+  isArchived Boolean   @default(false) @map("is_archived")
+  createdAt  DateTime  @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt  DateTime  @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  transactions Transaction[]
+  budgets      Budget[]
+  insights     Insight[]
+
+  // Kunci ber-tenant. Varian ber-`kind` mengikat jenis transaksi ke jenis kategori.
+  @@unique([userId, id], map: "categories_user_id_id_key")
+  @@unique([userId, id, kind], map: "categories_user_id_id_kind_key")
+  @@map("categories")
+}
+
+/// Tabel inti. Nominal selalu positif; arah uang dibawa kolom `type` (P5).
+model Transaction {
+  id          String            @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String            @map("user_id") @db.Uuid
+  walletId    String            @map("wallet_id") @db.Uuid
+  categoryId  String            @map("category_id") @db.Uuid
+  amount      BigInt
+  type        EntryKind
+  description String            @default("")
+  occurredAt  DateTime          @map("occurred_at") @db.Date
+  source      TransactionSource @default(manual)
+  /// UUID dari perangkat, kunci idempoten sinkronisasi offline (FR 16).
+  clientId    String?           @map("client_id") @db.Uuid
+  createdAt   DateTime          @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime          @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user         User          @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  wallet       Wallet        @relation(fields: [walletId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  category     Category      @relation(fields: [categoryId], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  aiExtraction AiExtraction?
+
+  @@unique([userId, id], map: "transactions_user_id_id_key")
+  @@unique([userId, clientId], map: "transactions_user_id_client_id_key")
+  @@index([userId, occurredAt(sort: Desc), createdAt(sort: Desc)], map: "transactions_user_occurred_idx")
+  @@index([userId, categoryId, occurredAt(sort: Desc)], map: "transactions_user_category_idx")
+  @@index([userId, walletId, occurredAt(sort: Desc)], map: "transactions_user_wallet_idx")
+  @@index([userId, type, occurredAt(sort: Desc)], map: "transactions_user_type_idx")
+  @@map("transactions")
+}
+
+/// Catatan kerja AI (FR 5). Ditulis satu kali bersama transaksinya, tidak
+/// pernah disunting pengguna, dan menjadi bahan ukur akurasi (§10.2).
+model AiExtraction {
+  id              String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId          String      @map("user_id") @db.Uuid
+  transactionId   String      @unique(map: "ai_extractions_transaction_key") @map("transaction_id") @db.Uuid
+  rawInput        String      @map("raw_input")
+  inputMode       AiInputMode @map("input_mode")
+  /// Usulan mentah AI sebelum pengguna menyunting.
+  parsedResult    Json        @map("parsed_result")
+  /// Hanya isian yang benar-benar diubah pengguna: { "amount": { "from": …, "to": … } }.
+  userCorrections Json        @default("{}") @map("user_corrections")
+  confidence      Float?      @db.Real
+  modelVersion    String      @map("model_version")
+  latencyMs       Int?        @map("latency_ms")
+  createdAt       DateTime    @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  user        User        @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  transaction Transaction @relation(fields: [transactionId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([userId, createdAt(sort: Desc)], map: "ai_extractions_user_created_idx")
+  @@index([modelVersion, inputMode, createdAt(sort: Desc)], map: "ai_extractions_model_mode_idx")
+  @@map("ai_extractions")
+}
+
+/// Pagu pengeluaran per kategori (FR 11). Satu baris per kategori per periode.
+model Budget {
+  id          String       @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String       @map("user_id") @db.Uuid
+  categoryId  String       @map("category_id") @db.Uuid
+  amountLimit BigInt       @map("amount_limit")
+  period      BudgetPeriod
+  startDate   DateTime     @map("start_date") @db.Date
+  isActive    Boolean      @default(true) @map("is_active")
+  createdAt   DateTime     @default(now()) @map("created_at") @db.Timestamptz(6)
+  updatedAt   DateTime     @updatedAt @map("updated_at") @db.Timestamptz(6)
+
+  user     User     @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  category Category @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, categoryId, period], map: "budgets_user_category_period_key")
+  @@map("budgets")
+}
+
+/// Keluaran job terjadwal (FR 13, 14). `dedupeKey` membuat retry job idempoten.
+model Insight {
+  id          String      @id @default(dbgenerated("gen_random_uuid()")) @db.Uuid
+  userId      String      @map("user_id") @db.Uuid
+  kind        InsightKind
+  categoryId  String?     @map("category_id") @db.Uuid
+  /// Contoh: "weekly_summary:2026-09-21", "anomaly:2026-09-24:<categoryId>".
+  dedupeKey   String      @map("dedupe_key")
+  content     String
+  payload     Json        @default("{}")
+  periodStart DateTime?   @map("period_start") @db.Date
+  periodEnd   DateTime?   @map("period_end") @db.Date
+  isRead      Boolean     @default(false) @map("is_read")
+  generatedAt DateTime    @default(now()) @map("generated_at") @db.Timestamptz(6)
+
+  user     User      @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+  category Category? @relation(fields: [categoryId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@unique([userId, dedupeKey], map: "insights_user_dedupe_key")
+  @@index([userId, generatedAt(sort: Desc)], map: "insights_user_generated_idx")
+  @@map("insights")
+}
+
+/// Penghitung kuota AI harian. Hanya dinaikkan lewat public.consume_ai_quota();
+/// role `authenticated` tidak punya hak INSERT/UPDATE di tabel ini.
+model AiUsageDaily {
+  userId          String   @map("user_id") @db.Uuid
+  usageDate       DateTime @map("usage_date") @db.Date
+  parseCount      Int      @default(0) @map("parse_count")
+  transcribeCount Int      @default(0) @map("transcribe_count")
+  updatedAt       DateTime @default(now()) @map("updated_at") @db.Timestamptz(6)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade, onUpdate: Cascade)
+
+  @@id([userId, usageDate], map: "ai_usage_daily_pkey")
+  @@map("ai_usage_daily")
+}
