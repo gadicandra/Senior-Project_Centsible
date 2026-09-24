@@ -65,3 +65,66 @@ jobs:
           NEXT_PUBLIC_SUPABASE_URL: ${{ secrets.NEXT_PUBLIC_SUPABASE_URL }}
           NEXT_PUBLIC_SUPABASE_ANON_KEY: ${{ secrets.NEXT_PUBLIC_SUPABASE_ANON_KEY }}
         run: pnpm build
+
+  deploy:
+    name: Deploy ke Vercel (${{ github.event_name == 'push' && 'production' || 'preview' }})
+    needs: quality
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    # PR dari fork tidak mendapat akses secrets, jadi deploy dilewati.
+    if: >-
+      github.event_name == 'push' ||
+      github.event.pull_request.head.repo.full_name == github.repository
+    environment:
+      name: ${{ github.event_name == 'push' && 'Production' || 'Preview' }}
+      url: ${{ steps.deploy.outputs.url }}
+    env:
+      VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
+      VERCEL_PROJECT_ID: ${{ secrets.VERCEL_PROJECT_ID }}
+      VERCEL_TOKEN: ${{ secrets.VERCEL_TOKEN }}
+      VERCEL_ENV: ${{ github.event_name == 'push' && 'production' || 'preview' }}
+      VERCEL_CLI_VERSION: '59.26.0'
+    steps:
+      - id: probe
+        name: Cek konfigurasi Vercel
+        run: |
+          if [ -n "$VERCEL_TOKEN" ] && [ -n "$VERCEL_ORG_ID" ] && [ -n "$VERCEL_PROJECT_ID" ]; then
+            echo "ready=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "ready=false" >> "$GITHUB_OUTPUT"
+            echo "::notice::Secret VERCEL_TOKEN/VERCEL_ORG_ID/VERCEL_PROJECT_ID belum diisi — deploy dilewati."
+          fi
+
+      - uses: actions/checkout@v5
+        if: steps.probe.outputs.ready == 'true'
+
+      - uses: pnpm/action-setup@v4
+        if: steps.probe.outputs.ready == 'true'
+        with:
+          version: ${{ env.PNPM_VERSION }}
+
+      - uses: actions/setup-node@v4
+        if: steps.probe.outputs.ready == 'true'
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+          cache: 'pnpm'
+
+      - name: Install Vercel CLI
+        if: steps.probe.outputs.ready == 'true'
+        run: npm install --global vercel@${{ env.VERCEL_CLI_VERSION }}
+
+      - name: Tarik konfigurasi & env dari Vercel
+        if: steps.probe.outputs.ready == 'true'
+        run: vercel pull --yes --environment=$VERCEL_ENV --token=$VERCEL_TOKEN
+
+      - name: Build
+        if: steps.probe.outputs.ready == 'true'
+        run: vercel build ${{ env.VERCEL_ENV == 'production' && '--prod' || '' }} --token=$VERCEL_TOKEN
+
+      - id: deploy
+        name: Deploy hasil build
+        if: steps.probe.outputs.ready == 'true'
+        run: |
+          url=$(vercel deploy --prebuilt ${{ env.VERCEL_ENV == 'production' && '--prod' || '' }} --token=$VERCEL_TOKEN)
+          echo "url=$url" >> "$GITHUB_OUTPUT"
+          echo "### 🚀 Deploy $VERCEL_ENV: $url" >> "$GITHUB_STEP_SUMMARY"
