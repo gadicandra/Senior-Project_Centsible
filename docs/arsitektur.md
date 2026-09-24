@@ -10,6 +10,8 @@ title: Arsitektur Sistem
 
 Dokumen ini menjelaskan **bagian apa saja yang membentuk Centsible, di mana tiap bagian dijalankan (Azure), dan bagaimana data mengalir** dari saat pengguna mengetik/mengucapkan transaksi sampai transaksi tersimpan dan diolah jadi insight. Setiap keputusan dikaitkan ke Functional Requirement (FR 1–FR 17) di [halaman utama](index.md#d-functional-requirements), supaya jelas **kenapa** bagian itu ada.
 
+> **Dokumen terkait:** [Perancangan SDLC, FR & ERD](index.md) · [Rancangan Basis Data](database.md) — penjabaran ERD menjadi tabel, constraint, indeks, kebijakan RLS, dan migrasi yang siap diterapkan.
+
 ---
 
 ## Daftar Isi
@@ -370,6 +372,8 @@ scripts/                              # entry point Container Apps Job (Fase 2)
 
 Alur satu permintaan: `app/**/page.tsx` → `server/services/*` (ambil data) → props → `components/**` (render). Untuk mutasi: `components/**` → `server/actions/*` → `server/services/*` → `server/db`.
 
+> Isi `prisma/schema.prisma` dan `prisma/migrations/` dirinci di [Rancangan Basis Data](database.md), termasuk alur kerja migrasi yang dipakai ([§14](database.md#14-alur-kerja-migrasi)).
+
 ---
 
 ## 6. Arsitektur AI — Main Path
@@ -637,6 +641,8 @@ flowchart LR
 ---
 
 ## 8. Keamanan & Isolasi Data
+
+> Wujud konkret bagian ini di tingkat basis data — daftar `GRANT`, 23 policy RLS, foreign key ber-tenant, dan pembungkus `withRls()` — ada di [Rancangan Basis Data §7](database.md#7-keamanan-grant-rls-dan-prisma).
 
 ### 8.1 Lapisan Pertahanan
 
