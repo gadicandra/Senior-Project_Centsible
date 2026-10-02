@@ -9,6 +9,26 @@
 -- ============================================================================
 
 -- ---------------------------------------------------------------------------
+-- 0. Pastikan ini database Supabase
+-- ---------------------------------------------------------------------------
+-- Migrasi 02 butuh role authenticated/service_role dan auth.uid(), migrasi 03
+-- butuh auth.users. Diperiksa di awal supaya salah sasaran database gagal
+-- dengan pesan jelas sebelum ada objek yang dibuat.
+do $$
+begin
+  if not exists (
+    select 1
+    from pg_catalog.pg_class c
+    join pg_catalog.pg_namespace n on n.oid = c.relnamespace
+    where n.nspname = 'auth' and c.relname = 'users'
+  ) or not exists (select 1 from pg_catalog.pg_roles where rolname = 'authenticated') then
+    raise exception
+      'Skema auth / role authenticated tidak ditemukan. Migrasi Centsible harus dijalankan pada database Supabase.';
+  end if;
+end;
+$$;
+
+-- ---------------------------------------------------------------------------
 -- 1. Tipe enum
 -- ---------------------------------------------------------------------------
 -- entry_kind dipakai bersama oleh categories.kind DAN transactions.type supaya
