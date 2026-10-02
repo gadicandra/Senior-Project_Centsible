@@ -1,11 +1,12 @@
-import { Geist, Geist_Mono } from "next/font/google";
+import { Geist_Mono, Plus_Jakarta_Sans } from "next/font/google";
 
-export const geistSans = Geist({
-  variable: "--font-geist-sans",
+// Plus Jakarta Sans = typeface tunggal hasil keputusan desain (Issue #12).
+export const fontSans = Plus_Jakarta_Sans({
+  variable: "--font-sans",
   subsets: ["latin"],
 });
 
-export const geistMono = Geist_Mono({
+export const fontMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
 });
