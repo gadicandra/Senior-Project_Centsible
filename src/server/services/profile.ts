@@ -12,3 +12,8 @@ export async function getProfile(claims: JwtClaims): Promise<Profile | null> {
   );
   return user;
 }
+
+/** Zona waktu pengguna, dipakai untuk "hari ini" (validasi tanggal & filter bawaan). */
+export async function getTimezone(claims: JwtClaims): Promise<string> {
+  return (await getProfile(claims))?.timezone ?? "Asia/Jakarta";
+}
