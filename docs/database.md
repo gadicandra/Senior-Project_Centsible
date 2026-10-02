@@ -803,19 +803,24 @@ Peringatan yang sama ditulis sebagai komentar di kepala `prisma/schema.prisma`, 
 
 ```bash
 pnpm add @prisma/client @prisma/adapter-pg
-pnpm add -D prisma
+pnpm add -D prisma dotenv
 ```
 
 `prisma.config.ts` di akar proyek (Prisma 7 tidak lagi menerima `url` di dalam `schema.prisma`):
 
 ```ts
-import "dotenv/config";
-import { defineConfig, env } from "prisma/config";
+import { config } from "dotenv";
+import { defineConfig } from "prisma/config";
+
+config({ path: ".env.local", quiet: true }); // sama dengan berkas env Next.js
 
 export default defineConfig({
   schema: "prisma/schema.prisma",
   migrations: { path: "prisma/migrations" },
-  datasource: { url: env("DIRECT_URL") },   // migrasi butuh koneksi non-pooled
+  // Migrasi butuh koneksi non-pooled. Sengaja process.env, bukan env():
+  // env() melempar error kalau variabel tidak ada, padahal `prisma generate`
+  // (postinstall di CI & Vercel) tidak butuh URL sama sekali.
+  datasource: { url: process.env.DIRECT_URL ?? "" },
 });
 ```
 
@@ -852,7 +857,7 @@ pnpm db:deploy     # menerapkan 4 migrasi secara berurutan
 pnpm db:generate   # membangun Prisma Client dari schema.prisma
 ```
 
-Migrasi 03 sengaja **berhenti dengan pesan jelas** kalau `auth.users` tidak ditemukan — supaya salah sasaran database ketahuan langsung, bukan setengah jalan.
+Migrasi 01 sengaja **berhenti dengan pesan jelas di baris pertama** kalau `auth.users` tidak ditemukan (pemeriksaan ini dulu ada di migrasi 03, padahal migrasi 02 sudah gagal lebih dulu karena role `authenticated` tidak ada) — supaya salah sasaran database ketahuan langsung, bukan setengah jalan.
 
 **Verifikasi setelah penerapan** (jalankan di SQL Editor Supabase):
 

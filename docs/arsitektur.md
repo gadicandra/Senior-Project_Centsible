@@ -41,7 +41,7 @@ Dokumen ini menjelaskan **bagian apa saja yang membentuk Centsible, di mana tiap
 
 | Komponen | **Fase 1 — Development / Preview** (sekarang) | **Fase 2 — Target** (§4–§14) |
 |---|---|---|
-| Hosting web + preview per PR | **Vercel** (Preview Deployment otomatis per PR/branch) — sesuai Breakdown D | Azure Container Apps (revision `pr-N`) |
+| Hosting web + preview per PR | **Vercel**, di-deploy oleh job `deploy` di CI: PR ke `main` → Preview, push ke `main` → Production (= staging/demo Fase 1) — sesuai Breakdown D | Azure Container Apps (revision `pr-N`) |
 | Tugas terjadwal (FR 13–14) | **Vercel Cron** → Route Handler `/api/cron/*` yang dilindungi `CRON_SECRET` | Container Apps Jobs |
 | AI teks → JSON (Jalur A) | **API di luar Azure**: Claude API langsung, **atau** lewat **9router** (gateway OpenAI-compatible) | Azure OpenAI (model chat) |
 | AI suara → teks (Jalur B) | **Whisper lokal** (mis. [Speaches](https://github.com/speaches-ai/speaches) / faster-whisper di Docker, endpoint OpenAI-compatible `/v1/audio/transcriptions`) | Azure OpenAI Whisper |
@@ -360,6 +360,7 @@ src/
 │   ├── ai/                           # Provider AI (TextParser/Transcriber), prompt, normalisasi nominal
 │   ├── db/                           # Prisma client + withRls()
 │   └── supabase/                     # server.ts, proxy.ts (pola resmi @supabase/ssr)
+├── generated/prisma/                 # Hasil `prisma generate` (tidak di-commit)
 ├── lib/                              # SHARED: skema Zod, util format, konstanta
 │   └── supabase/client.ts            # createBrowserClient (dipakai komponen client)
 └── proxy.ts                          # Next 16: pengganti middleware.ts (harus di src/ bila memakai src/)
@@ -418,7 +419,7 @@ flowchart LR
 **Langkah di server (`/api/ai/parse`):**
 
 1. **Verifikasi sesi** dengan `supabase.auth.getClaims()` → dapat `user_id`.
-2. **Cek kuota** pengguna (mis. 100 panggilan AI/hari) supaya biaya tidak jebol.
+2. **Cek kuota** pengguna (mis. 100 panggilan AI/hari) supaya biaya tidak jebol: `select public.consume_ai_quota('parse', 100)` di dalam `withRls()`. Penghitungnya ada di tabel `ai_usage_daily` (hari dihitung menurut zona waktu pengguna); fungsi melempar SQLSTATE `53400` kalau kuota habis.
 3. **Ambil konteks pengguna:** daftar kategori & dompet aktif miliknya, serta zona waktu.
 4. **Bangun skema JSON dinamis** — isian `category` dan `wallet` dibatasi dengan `enum` berisi nama kategori/dompet milik pengguna itu. Dengan mode `strict: true`, model **tidak mungkin** mengarang kategori yang tidak ada.
 5. **Panggil model chat** dengan *Structured Outputs* (`response_format.type = "json_schema"`, `strict: true`), `temperature` rendah, dan batas waktu 8 detik.
@@ -521,7 +522,7 @@ Keluaran AI **tidak langsung dipercaya**. Setelah Jalur A, server menjalankan:
 |---|---|
 | Azure OpenAI error / timeout > 8 dtk | Form manual terbuka dengan **keterangan terisi kalimat asli**; pengguna tinggal isi nominal & kategori (FR 7) |
 | Kena *rate limit* (HTTP 429) | Satu kali coba ulang dengan jeda, lalu fallback ke form manual |
-| Kuota harian pengguna habis | Pesan jelas + form manual |
+| Kuota harian pengguna habis (`consume_ai_quota` melempar `53400`) | Pesan jelas + form manual |
 | Whisper gagal / audio kosong | Pesan "suara tidak terdengar jelas", tombol rekam ulang + opsi ketik |
 | Offline | Suara **tidak bisa** diproses. Input teks disimpan ke antrean IndexedDB sebagai **kalimat mentah**, diproses saat online, dan **tetap** harus dikonfirmasi pengguna (lihat §7.4) |
 
@@ -529,8 +530,8 @@ Keluaran AI **tidak langsung dipercaya**. Setelah Jalur A, server menjalankan:
 
 Setiap kali pengguna menekan **Simpan** pada transaksi yang berasal dari AI, Server Action `simpanTransaksi` menulis **dalam satu transaksi database**:
 
-1. Baris baru di `transactions`.
-2. Baris baru di `ai_extractions` berisi `raw_input`, `input_mode` (text/voice), `parsed_result` (usulan AI), `user_corrections` (hanya isian yang diubah pengguna — diff antara usulan dan nilai akhir), `model_version` (nama deployment + versi prompt), `latency_ms`.
+1. Baris baru di `transactions` dengan `source` = `text` / `voice` (form manual memakai `manual`).
+2. Baris baru di `ai_extractions` berisi `raw_input`, `input_mode` (text/voice), `parsed_result` (usulan AI), `user_corrections` (hanya isian yang diubah pengguna — diff antara usulan dan nilai akhir), `confidence`, `model_version` (nama deployment + versi prompt), `latency_ms`.
 
 Data inilah yang dipakai untuk mengukur target **≥ 85% tanpa koreksi pada nominal & kategori** (lihat §10).
 
@@ -612,7 +613,7 @@ sequenceDiagram
     end
 ```
 
-Job dibuat **idempoten**: sebelum menulis, cek apakah insight untuk `(user_id, minggu)` sudah ada, sehingga retry tidak membuat duplikat.
+Job dibuat **idempoten**: setiap insight punya `dedupe_key` (mis. `weekly:2026-W40`) dengan `UNIQUE (user_id, dedupe_key)`, dan ditulis dengan `ON CONFLICT DO NOTHING`, sehingga retry tidak membuat duplikat. Peringatan anomali (FR 14) memakai tabel yang sama dengan `kind = anomaly`.
 
 ### 7.4 Offline & Sinkronisasi (FR 16)
 
@@ -636,7 +637,7 @@ flowchart LR
 
 - Login email/password + Google OAuth ditangani Supabase Auth; callback OAuth ke `/auth/callback`.
 - `proxy.ts` (Next 16) memanggil helper `updateSession()` dari `@supabase/ssr`, yang memanggil **`getClaims()`** untuk memvalidasi JWT dan menyegarkan cookie sesi di setiap request, lalu mengalihkan pengguna yang belum login ke `/login`.
-- **Hapus akun:** Server Action memakai *secret key* Supabase (hanya di server, dari Key Vault) untuk `auth.admin.deleteUser()`; semua tabel punya `ON DELETE CASCADE` dari `user_id`, jadi seluruh data ikut terhapus.
+- **Hapus akun:** Server Action memakai *secret key* Supabase (hanya di server, dari Key Vault) untuk `auth.admin.deleteUser()`; semua tabel punya `ON DELETE CASCADE` dari `user_id`, jadi seluruh data ikut terhapus. (Di Fase 1 *secret key* disimpan di Environment Variables Vercel.) Catatan: FK transaksi → dompet/kategori sengaja `DEFERRABLE` tanpa cascade, jadi **menghapus dompet/kategori yang masih dipakai ditolak** — UI menawarkan *arsipkan* ([Rancangan Basis Data §5.2](database.md#52-kenapa-dua-fk-itu-deferrable-initially-deferred)).
 
 ---
 
@@ -650,7 +651,7 @@ flowchart LR
 |---|---|
 | Transport | HTTPS wajib (ingress Container Apps, sertifikat terkelola untuk domain kustom) |
 | Autentikasi | Supabase Auth, JWT diverifikasi via `getClaims()` di `proxy.ts` **dan** diulang di tiap Server Action / Route Handler (jangan hanya mengandalkan proxy) |
-| Otorisasi data | **Row Level Security** di semua tabel pengguna: `using (user_id = auth.uid())` (FR 17) |
+| Otorisasi data | **Row Level Security** di semua tabel pengguna: `using ((select auth.uid()) = user_id)` — 23 policy di 8 tabel, `anon` tidak diberi hak apa pun (FR 17) |
 | Rahasia | Key Vault + Managed Identity; tidak ada kunci di repo, di image, atau di variabel GitHub |
 | Akses AI | Entra ID (role `Cognitive Services OpenAI User`), bukan API key |
 | Penyalahgunaan AI | Kuota per pengguna per hari, batas panjang input teks (mis. 300 karakter), batas durasi audio 30 dtk |
@@ -664,10 +665,13 @@ Prisma terhubung ke Postgres memakai *connection string* dengan role `postgres`,
 
 ```ts
 // src/server/db/with-rls.ts
-export async function withRls<T>(claims: JwtClaims, fn: (tx: Tx) => Promise<T>) {
+export async function withRls<T>(
+  claims: Record<string, unknown>,
+  fn: (tx: RlsTx) => Promise<T>,
+): Promise<T> {
   return prisma.$transaction(async (tx) => {
     await tx.$executeRaw`select set_config('request.jwt.claims', ${JSON.stringify(claims)}, true)`;
-    await tx.$executeRaw`set local role authenticated`;
+    await tx.$executeRawUnsafe("set local role authenticated"); // konstanta, bukan input pengguna
     return fn(tx);
   });
 }
@@ -698,14 +702,14 @@ Sesuai Prisma 7 + Supabase:
 | Lingkungan | Tempat | Data | AI |
 |---|---|---|---|
 | **Lokal** | `pnpm dev` di laptop | Supabase CLI lokal (Docker) atau project Supabase dev | **Fase 1:** Claude API / 9router (`localhost:20128/v1`) + Whisper lokal (`localhost:8000/v1`). **Fase 2:** Deployment Azure OpenAI dev via `az login` (DefaultAzureCredential) |
-| **Preview (per PR)** | **Fase 1:** Vercel Preview Deployment. **Fase 2:** Revision baru di Container App **dev** dengan *label* `pr-<nomor>` → URL unik | Project Supabase **dev** | **Fase 1:** Claude API / 9router yang ter-*expose* dengan API key; suara opsional (`AI_STT_ENABLED`). **Fase 2:** Deployment dev |
+| **Preview (per PR)** | **Fase 1:** Vercel Preview Deployment dari job `deploy` CI. **Fase 2:** Revision baru di Container App **dev** dengan *label* `pr-<nomor>` → URL unik | Project Supabase **dev** | **Fase 1:** Claude API / 9router yang ter-*expose* dengan API key; suara opsional (`AI_STT_ENABLED`). **Fase 2:** Deployment dev |
 | **Production** | Container App **prod** (Fase 2) | Project Supabase **prod** | Deployment prod |
 
-> Di Fase 1, CI (`main.yml`) tetap menjadi gerbang kualitas; Vercel Git Integration yang membuat Preview Deployment tiap PR dan menaruh URL-nya di PR. Pipeline Azure di bawah ini baru diaktifkan saat masuk Fase 2.
+> **Fase 1:** `main.yml` punya dua job. `quality` (lint, typecheck, test, build) menjadi gerbang; kalau lolos, job `deploy` menjalankan `vercel pull` → `vercel build` → `vercel deploy --prebuilt` (PR ke `main` → Preview, push ke `main` → Production yang berperan sebagai staging/demo). Git Integration Vercel sengaja dimatikan di `vercel.json` (`git.deploymentEnabled: false`) supaya tidak terjadi deploy ganda. URL deploy muncul di tab *Environments* GitHub dan ringkasan job. Migrasi basis data di Fase 1 dijalankan manual dengan `pnpm db:deploy`. Pipeline Azure di bawah ini baru diaktifkan saat masuk Fase 2.
 
 ### 9.2 Pipeline
 
-`.github/workflows/main.yml` yang sudah ada tetap menjadi gerbang kualitas (lint, typecheck, test, build). Workflow deploy ditambahkan setelahnya:
+**Fase 2.** Job `quality` di `.github/workflows/main.yml` tetap menjadi gerbang kualitas; job `deploy` Vercel diganti dengan alur Azure berikut:
 
 ```mermaid
 flowchart LR
@@ -795,7 +799,7 @@ Dua cara pengukuran yang saling melengkapi:
 | FR 7 | Form manual selalu jalan | Form manual (tanpa dependensi AI), fallback §6.4 | — |
 | FR 8 | CRUD + filter transaksi | `transaksi/`, Server Actions | Supabase Postgres |
 | FR 9 | Kategori bawaan + kelola | Trigger/seed saat user baru dibuat, `pengaturan/` | Supabase Postgres |
-| FR 10 | Multi-dompet, saldo dihitung | View/query `initial_balance + Σ transaksi` | Supabase Postgres |
+| FR 10 | Multi-dompet, saldo dihitung | View `wallet_balances` (`security_invoker`): `initial_balance + Σ transaksi` | Supabase Postgres |
 | FR 11 | Anggaran per kategori | `laporan/`, tabel `budgets` | Supabase Postgres |
 | FR 12 | Dashboard ringkasan | Server Component + query agregat | Supabase Postgres |
 | FR 13 | Ringkasan mingguan AI | `job-weekly-insight`, tabel `insights` | **Container Apps Job** + Azure OpenAI chat |
