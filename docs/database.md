@@ -969,7 +969,9 @@ Ditulis di sini supaya tidak ada yang mengira basis data sudah menjaganya:
 
 ### 17.3 Status
 
-Seluruh berkas dalam subproyek ini adalah **rancangan yang siap diterapkan, tetapi belum dijalankan ke basis data mana pun** — project Supabase memang baru disiapkan di subproyek berikutnya. Penerapan pertama (`pnpm db:deploy`) beserta daftar verifikasi [§14.4](#144-urutan-penerapan-pertama-kali) dan uji wajib [§14.6](#146-uji-yang-wajib-ada) dikerjakan bersama subproyek "Config Supabase".
+Keempat migrasi **sudah diterapkan ke project Supabase dev** (2 Oktober 2026, Issue #19) lewat `pnpm db:deploy`. Semua pemeriksaan [§14.4](#144-urutan-penerapan-pertama-kali) lolos: RLS aktif di 8/8 tabel, 23 policy, `wallet_balances` memakai `security_invoker=true`, dan kedua trigger `auth.users` terpasang. Uji wajib [§14.6](#146-uji-yang-wajib-ada) ada di `tests/db/rls.test.ts` dan dijalankan dengan `pnpm test:db` (7/7 lolos). Uji ini sengaja tidak masuk CI karena membutuhkan kredensial Supabase.
+
+> **Catatan koneksi:** host *Direct connection* (`db.<ref>.supabase.co`) hanya bisa dijangkau lewat IPv6. Di jaringan tanpa IPv6, isi `DIRECT_URL` dengan **Session pooler** (host yang sama dengan `DATABASE_URL`, port 5432).
 
 ---
 
