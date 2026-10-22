@@ -10,3 +10,7 @@ export function isPublicPath(pathname: string) {
 export function isGuestOnlyPath(pathname: string) {
   return GUEST_ONLY.includes(pathname);
 }
+/** Route Handler di bawah /api: tanpa sesi dijawab JSON 401, bukan redirect ke /login. */
+export function isApiPath(pathname: string) {
+  return pathname === "/api" || pathname.startsWith("/api/");
+}

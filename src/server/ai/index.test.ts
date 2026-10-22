@@ -1,6 +1,6 @@
 // @vitest-environment node
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
-import { AiError, buildModelVersion, createDeadline } from ".";
+import { AiError, buildModelVersion, createDeadline, getTextParser, resetTextParserForTests } from ".";
 
 const MV_RE = /^[\w.:\/@-]{1,120}$/;
 
@@ -84,5 +84,90 @@ describe("buildModelVersion", () => {
       expect(buildModelVersion("anthropic", model)).toMatch(MV_RE);
       expect(buildModelVersion("openai-compatible", model)).toMatch(MV_RE);
     }
+  });
+});
+
+describe("getTextParser", () => {
+  const SECRET = "s".repeat(32);
+  const AI_VARS = [
+    "AI_TEXT_PROVIDER",
+    "AI_TEXT_MODEL",
+    "ANTHROPIC_API_KEY",
+    "AI_TEXT_BASE_URL",
+    "AI_TEXT_API_KEY",
+    "AI_PARSE_DAILY_LIMIT",
+    "AI_DRAFT_SECRET",
+  ];
+  let warnSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    for (const name of AI_VARS) vi.stubEnv(name, undefined);
+    resetTextParserForTests();
+    warnSpy = vi.spyOn(console, "warn").mockImplementation(() => {});
+    vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+  afterEach(() => {
+    vi.unstubAllEnvs();
+    vi.restoreAllMocks();
+  });
+
+  function codeOf(fn: () => unknown) {
+    try {
+      fn();
+    } catch (e) {
+      expect(e).toBeInstanceOf(AiError);
+      return (e as AiError).code;
+    }
+    throw new Error("tidak melempar");
+  }
+
+  const stubAnthropic = () => {
+    vi.stubEnv("AI_TEXT_PROVIDER", "anthropic");
+    vi.stubEnv("AI_TEXT_MODEL", "claude-haiku-4-5");
+    vi.stubEnv("ANTHROPIC_API_KEY", "sk-ant-test-key-0123456789");
+    vi.stubEnv("AI_DRAFT_SECRET", SECRET);
+  };
+  const stubGateway = (provider: "openai-compatible" | "azure") => {
+    vi.stubEnv("AI_TEXT_PROVIDER", provider);
+    vi.stubEnv("AI_TEXT_MODEL", "gemini-2.5-flash");
+    vi.stubEnv("AI_TEXT_BASE_URL", "http://localhost:20128/v1");
+    vi.stubEnv("AI_TEXT_API_KEY", "gw-key");
+    vi.stubEnv("AI_DRAFT_SECRET", SECRET);
+  };
+
+  test("provider tidak di-set → not_configured", () => {
+    expect(codeOf(getTextParser)).toBe("not_configured");
+  });
+
+  test("anthropic tanpa key → not_configured", () => {
+    stubAnthropic();
+    vi.stubEnv("ANTHROPIC_API_KEY", undefined);
+    expect(codeOf(getTextParser)).toBe("not_configured");
+  });
+
+  test("azure → not_configured, warn azure_not_implemented sekali", () => {
+    stubGateway("azure");
+    expect(codeOf(getTextParser)).toBe("not_configured");
+    expect(codeOf(getTextParser)).toBe("not_configured");
+    const lines = warnSpy.mock.calls
+      .map((c: unknown[]) => String(c[0]))
+      .filter((l: string) => l.includes("azure_not_implemented"));
+    expect(lines).toHaveLength(1);
+  });
+
+  test("anthropic valid → provider anthropic dan di-memo", () => {
+    stubAnthropic();
+    const parser = getTextParser();
+    expect(parser.provider).toBe("anthropic");
+    expect(parser.model).toBe("claude-haiku-4-5");
+    vi.stubEnv("AI_TEXT_PROVIDER", undefined);
+    expect(getTextParser()).toBe(parser);
+    resetTextParserForTests();
+    expect(codeOf(getTextParser)).toBe("not_configured");
+  });
+
+  test("openai-compatible valid → provider openai-compatible", () => {
+    stubGateway("openai-compatible");
+    expect(getTextParser().provider).toBe("openai-compatible");
   });
 });

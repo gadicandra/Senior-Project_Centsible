@@ -1,8 +1,13 @@
 import "server-only";
-import { MODEL_VERSION_MAX } from "@/lib/ai/limits";
+import Anthropic from "@anthropic-ai/sdk";
+import OpenAI from "openai";
+import { AI_DEADLINE_MS, MODEL_VERSION_MAX } from "@/lib/ai/limits";
+import { getAiConfig, resetAiConfigForTests } from "@/server/env";
 import { PROMPT_VERSION } from "./prompt";
+import { anthropicParser } from "./providers/anthropic";
+import { openAiCompatParser } from "./providers/openai-compatible";
 
-// Kontrak inti TextParser (design §4.1). Selector provider (getTextParser) ditambahkan di #25.
+// Kontrak inti TextParser dan selector provider (design §4.1).
 
 export type AiProviderId = "anthropic" | "openai-compatible" | "azure";
 
@@ -78,4 +83,45 @@ export class AiError extends Error {
   ) {
     super(code);
   }
+}
+
+let cachedParser: TextParser | undefined;
+let azureWarned = false;
+
+/**
+ * Parser sesuai env, dibuat malas dan di-memo per proses (env yang hilang tidak merusak `next build`).
+ * Melempar AiError("not_configured") bila AI mati atau env tidak valid.
+ */
+export function getTextParser(): TextParser {
+  if (cachedParser) return cachedParser;
+  const config = getAiConfig();
+  if (!config) throw new AiError("not_configured", undefined, "env");
+  switch (config.provider) {
+    case "anthropic":
+      cachedParser = anthropicParser({
+        client: new Anthropic({ apiKey: config.apiKey, maxRetries: 1, timeout: AI_DEADLINE_MS }),
+        model: config.model,
+      });
+      return cachedParser;
+    case "openai-compatible":
+      cachedParser = openAiCompatParser({
+        client: new OpenAI({ apiKey: config.apiKey, baseURL: config.baseURL, maxRetries: 1, timeout: AI_DEADLINE_MS }),
+        model: config.model,
+      });
+      return cachedParser;
+    case "azure":
+      // Cabang disiapkan untuk Fase 2 (providers/azure.ts).
+      if (!azureWarned) {
+        azureWarned = true;
+        console.warn(JSON.stringify({ evt: "ai_config", code: "azure_not_implemented" }));
+      }
+      throw new AiError("not_configured", undefined, "azure");
+  }
+}
+
+/** Khusus test: lupakan parser dan config yang di-memo supaya process.env dibaca ulang. */
+export function resetTextParserForTests(): void {
+  cachedParser = undefined;
+  azureWarned = false;
+  resetAiConfigForTests();
 }
