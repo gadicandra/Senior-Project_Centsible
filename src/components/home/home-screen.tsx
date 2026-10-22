@@ -1,11 +1,23 @@
 import Link from "next/link";
+import { AiCapture } from "@/components/ai-input/ai-capture";
+import type { CategoryOption, WalletOption } from "@/components/transaksi/types";
 import { Button } from "@/components/ui/button";
 import { formatRupiah } from "@/lib/money";
 
-type WalletBalance = { id: string; name: string; balance: number; isDefault: boolean };
+type WalletBalance = WalletOption & { balance: number };
 
 /** Beranda sementara: total & saldo per dompet. Dashboard lengkap dikerjakan di Issue #30. */
-export function HomeScreen({ displayName, wallets }: { displayName: string; wallets: WalletBalance[] }) {
+export function HomeScreen({
+  displayName,
+  wallets,
+  categories,
+  today,
+}: {
+  displayName: string;
+  wallets: WalletBalance[];
+  categories: CategoryOption[];
+  today: string;
+}) {
   const total = wallets.reduce((sum, w) => sum + w.balance, 0);
   return (
     <div className="flex flex-col gap-6">
@@ -28,6 +40,11 @@ export function HomeScreen({ displayName, wallets }: { displayName: string; wall
       <Button className="self-start" render={<Link href="/transaksi" />}>
         Lihat transaksi
       </Button>
+      <AiCapture
+        categories={categories}
+        wallets={wallets.map(({ id, name, isDefault, isArchived }) => ({ id, name, isDefault, isArchived }))}
+        today={today}
+      />
     </div>
   );
 }

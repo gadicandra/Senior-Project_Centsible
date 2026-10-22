@@ -14,25 +14,41 @@ import { cn } from "@/lib/utils";
 import { saveTransaction } from "@/server/actions/transactions";
 import type { CategoryOption, EntryKind, TransactionRow, WalletOption } from "./types";
 
+/** Isian awal form baru (mis. dari jalur AI). `amount` berupa string, sama seperti isi field. */
+export type TransactionPrefill = {
+  type?: (typeof ENTRY_KINDS)[number];
+  amount?: string;
+  categoryId?: string;
+  walletId?: string;
+  description?: string;
+  occurredAt?: string;
+};
+
 /**
  * Form manual (FR 7): tidak bergantung pada AI sama sekali, jadi selalu bisa dipakai.
  * Pilihan kategori mengikuti jenis transaksi yang dipilih.
  */
 export function TransactionForm({
   transaction,
+  prefill: prefillProp,
   categories,
   wallets,
   today,
   onDone,
 }: {
   transaction?: TransactionRow;
+  /** Dipakai hanya saat membuat transaksi baru (`transaction` kosong). */
+  prefill?: TransactionPrefill;
   categories: CategoryOption[];
   wallets: WalletOption[];
   today: string;
   onDone: () => void;
 }) {
   const [state, action] = useActionState(saveTransaction, initialFormState);
-  const [type, setType] = useState<EntryKind>((state.values?.type as EntryKind) ?? transaction?.type ?? "expense");
+  const prefill = transaction ? undefined : prefillProp;
+  const [type, setType] = useState<EntryKind>(
+    (state.values?.type as EntryKind) ?? transaction?.type ?? prefill?.type ?? "expense",
+  );
 
   useEffect(() => {
     if (state.ok) {
@@ -48,8 +64,11 @@ export function TransactionForm({
   const walletOptions = wallets
     .filter((w) => !w.isArchived || w.id === transaction?.wallet.id)
     .map((w) => ({ value: w.id, label: w.name }));
-  const defaultWallet = transaction?.wallet.id ?? wallets.find((w) => w.isDefault)?.id;
-  const defaultCategory = transaction?.type === type ? transaction.category.id : undefined;
+  const prefillWallet = walletOptions.some((o) => o.value === prefill?.walletId) ? prefill?.walletId : undefined;
+  const defaultWallet = transaction?.wallet.id ?? prefillWallet ?? wallets.find((w) => w.isDefault)?.id;
+  // Kategori isian awal hanya dipakai bila cocok dengan jenis yang sedang dipilih.
+  const prefillCategory = categoryOptions.some((o) => o.value === prefill?.categoryId) ? prefill?.categoryId : undefined;
+  const defaultCategory = transaction ? (transaction.type === type ? transaction.category.id : undefined) : prefillCategory;
 
   return (
     <form action={action} noValidate>
@@ -78,7 +97,7 @@ export function TransactionForm({
           inputMode="numeric"
           autoComplete="off"
           placeholder="50.000"
-          defaultValue={transaction ? String(transaction.amount) : undefined}
+          defaultValue={transaction ? String(transaction.amount) : prefill?.amount}
           state={state}
         />
         {/* key: daftar kategori berganti saat jenis berganti, jadi pilihan lama di-reset. */}
@@ -92,14 +111,14 @@ export function TransactionForm({
           state={type === state.values?.type ? state : { ...state, values: undefined }}
         />
         <FormSelect name="walletId" label="Dompet" options={walletOptions} defaultValue={defaultWallet} state={state} />
-        <FormField name="occurredAt" label="Tanggal" type="date" max={today} defaultValue={transaction?.occurredAt ?? today} state={state} />
+        <FormField name="occurredAt" label="Tanggal" type="date" max={today} defaultValue={transaction?.occurredAt ?? prefill?.occurredAt ?? today} state={state} />
         <FormField
           name="description"
           label="Keterangan"
           placeholder="Opsional, mis. beli bensin"
           maxLength={200}
           autoComplete="off"
-          defaultValue={transaction?.description}
+          defaultValue={transaction?.description ?? prefill?.description}
           state={state}
         />
         <div className="flex justify-end gap-2">

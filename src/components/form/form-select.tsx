@@ -1,6 +1,6 @@
 "use client";
 
-import { Field, FieldError, FieldLabel } from "@/components/ui/field";
+import { Field, FieldDescription, FieldError, FieldLabel } from "@/components/ui/field";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import type { FormState } from "@/lib/form-state";
 
@@ -15,6 +15,7 @@ export function FormSelect({
   defaultValue,
   placeholder = "Pilih…",
   disabled,
+  hint,
 }: {
   name: string;
   label: string;
@@ -23,14 +24,17 @@ export function FormSelect({
   defaultValue?: string;
   placeholder?: string;
   disabled?: boolean;
+  /** Petunjuk yang dibacakan bersama kontrol (aria-describedby → `${name}-hint`). */
+  hint?: React.ReactNode;
 }) {
   const errors = state.fieldErrors?.[name];
   const initial = state.values?.[name] ?? defaultValue ?? null;
+  const hintId = hint ? `${name}-hint` : undefined;
   return (
     <Field data-invalid={!!errors || undefined}>
       <FieldLabel htmlFor={name}>{label}</FieldLabel>
       <Select name={name} items={options} defaultValue={initial} disabled={disabled}>
-        <SelectTrigger id={name} aria-invalid={!!errors || undefined} className="w-full">
+        <SelectTrigger id={name} aria-invalid={!!errors || undefined} aria-describedby={hintId} className="w-full">
           <SelectValue placeholder={placeholder} />
         </SelectTrigger>
         <SelectContent>
@@ -41,6 +45,7 @@ export function FormSelect({
           ))}
         </SelectContent>
       </Select>
+      {hint && <FieldDescription id={hintId}>{hint}</FieldDescription>}
       <FieldError errors={errors?.map((message) => ({ message }))} />
     </Field>
   );
