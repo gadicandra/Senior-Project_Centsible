@@ -8,7 +8,7 @@ import {
   RateLimitError,
 } from "@anthropic-ai/sdk";
 import { jsonSchemaOutputFormat } from "@anthropic-ai/sdk/helpers/json-schema";
-import { AiError, type TextParser } from "..";
+import { AiError, type TextParser, type UserAiContext } from "..";
 import { STATIC_SYSTEM_PROMPT, contextBlock, wrapUserText } from "../prompt";
 import { buildWireJsonSchema, validateWire } from "../schema";
 import { sanitizeModel, toAiError, type SdkErrorClasses } from "./errors";
@@ -25,6 +25,27 @@ const SDK_ERRORS: SdkErrorClasses = {
 
 /** Bagian klien yang dipakai; test menyuntikkan objek palsu. */
 export type AnthropicClient = { messages: Pick<Anthropic["messages"], "parse"> };
+
+/**
+ * `jsonSchemaOutputFormat` dengan `parse` yang tidak melempar. `parse` bawaan (JSON.parse biasa) membuat
+ * `messages.parse` melempar AnthropicError pada output terpotong/penolakan berupa prosa, sebelum
+ * `stop_reason` sempat diperiksa (lib/parser.js). JSON rusak → `undefined` → `validateWire` → invalid_output.
+ */
+function lenientOutputFormat(ctx: UserAiContext) {
+  // `as never`: skema dibangun saat runtime, FromSchema tidak bisa menginferensinya.
+  // transform:false: transform bawaan 1.1.0 memindahkan `enum` ke description (design §2.1-2).
+  const format = jsonSchemaOutputFormat(buildWireJsonSchema(ctx) as never, { transform: false });
+  return {
+    ...format,
+    parse(text: string): unknown {
+      try {
+        return JSON.parse(text);
+      } catch {
+        return undefined;
+      }
+    },
+  };
+}
 
 export function anthropicParser({ client, model }: { client: AnthropicClient; model: string }): TextParser {
   return {
@@ -44,11 +65,7 @@ export function anthropicParser({ client, model }: { client: AnthropicClient; mo
               { type: "text", text: contextBlock(ctx) },
             ],
             messages: [{ role: "user", content: wrapUserText(input) }],
-            output_config: {
-              // transform:false: transform bawaan 1.1.0 memindahkan `enum` ke description (design §2.1-2).
-              // `as never`: skema dibangun saat runtime, FromSchema tidak bisa menginferensinya.
-              format: jsonSchemaOutputFormat(buildWireJsonSchema(ctx) as never, { transform: false }),
-            },
+            output_config: { format: lenientOutputFormat(ctx) },
           },
           { signal: deadline.signal, timeout: deadline.remainingMs(), maxRetries: 1 },
         );
@@ -59,7 +76,7 @@ export function anthropicParser({ client, model }: { client: AnthropicClient; mo
         throw new AiError("invalid_output", undefined, message.stop_reason);
       }
       // Tidak ada retry untuk output tidak valid: grammar sudah membatasi, pelanggaran = penolakan/pemotongan.
-      const data = validateWire(message.parsed_output as unknown, ctx);
+      const data = validateWire(message.parsed_output, ctx);
       return { data, servedModel: sanitizeModel(message.model) ?? model, attempts: 1 };
     },
   };

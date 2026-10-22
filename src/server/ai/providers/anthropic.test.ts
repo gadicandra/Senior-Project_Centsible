@@ -1,5 +1,5 @@
 // @vitest-environment node
-import {
+import Anthropic, {
   AnthropicError,
   APIConnectionTimeoutError,
   APIUserAbortError,
@@ -39,17 +39,38 @@ const OUTPUT = {
   confidence: 0.9,
 };
 
+type RawMessage = { model: string; stop_reason: string; content: { type: "text"; text: string }[] };
+
+/**
+ * Meniru `messages.parse` 1.1.0 (lib/parser.js): `format.parse` dijalankan untuk tiap blok teks dan
+ * lemparannya dibungkus AnthropicError, jadi format yang tidak lenient akan gagal di sini seperti SDK asli.
+ */
+function sdkParse(params: unknown, raw: RawMessage) {
+  const format = (params as { output_config: { format: { parse(text: string): unknown } } }).output_config.format;
+  let parsed_output: unknown = null;
+  for (const block of raw.content) {
+    let out: unknown;
+    try {
+      out = format.parse(block.text);
+    } catch (error) {
+      throw new AnthropicError(`Failed to parse structured output: ${error}`);
+    }
+    if (parsed_output === null) parsed_output = out;
+  }
+  return { ...raw, parsed_output };
+}
+
 function fakeClient(impl: (...args: unknown[]) => unknown) {
-  const parse = vi.fn(impl);
+  const parse = vi.fn(async (params: unknown, options: unknown) =>
+    sdkParse(params, (await impl(params, options)) as RawMessage),
+  );
   return { client: { messages: { parse } } as unknown as AnthropicClient, parse };
 }
 
-const message = (over: Record<string, unknown> = {}) => ({
-  model: "claude-haiku-4-5-20251001",
-  stop_reason: "end_turn",
-  parsed_output: OUTPUT,
-  ...over,
-});
+const message = (over: Partial<RawMessage> & { text?: string } = {}): RawMessage => {
+  const { text = JSON.stringify(OUTPUT), ...rest } = over;
+  return { model: "claude-haiku-4-5-20251001", stop_reason: "end_turn", content: [{ type: "text", text }], ...rest };
+};
 
 let deadline: Deadline;
 afterEach(() => deadline?.dispose());
@@ -115,16 +136,48 @@ describe("anthropicParser: sukses", () => {
 });
 
 describe("anthropicParser: gagal", () => {
-  test.each(["refusal", "max_tokens"] as const)("stop_reason %s → invalid_output dengan detail", async (reason) => {
-    const { result } = await parseWith(async () => message({ stop_reason: reason, parsed_output: null }));
+  test.each([
+    ["refusal", "Maaf, saya tidak bisa membantu permintaan ini."],
+    ["max_tokens", JSON.stringify(OUTPUT).slice(0, 40)],
+  ] as const)("stop_reason %s dengan teks bukan JSON → invalid_output dengan detail", async (reason, text) => {
+    const { result } = await parseWith(async () => message({ stop_reason: reason, text }));
     const err = await errorOf(result);
     expect(err.code).toBe("invalid_output");
     expect(err.detail).toBe(reason);
   });
 
+  test("teks bukan JSON dengan end_turn → invalid_output tanpa detail, dipanggil sekali", async () => {
+    const { fake, result } = await parseWith(async () => message({ text: "bukan json" }));
+    const err = await errorOf(result);
+    expect(err.code).toBe("invalid_output");
+    expect(err.detail).toBeUndefined();
+    expect(fake.parse).toHaveBeenCalledTimes(1);
+  });
+
   test("parsed_output tidak sesuai skema → invalid_output", async () => {
-    const { result } = await parseWith(async () => message({ parsed_output: { ...OUTPUT, category: "Rahasia" } }));
+    const { result } = await parseWith(async () => message({ text: JSON.stringify({ ...OUTPUT, category: "Rahasia" }) }));
     expect((await errorOf(result)).code).toBe("invalid_output");
+  });
+
+  test("SDK asli (fetch palsu): max_tokens dengan JSON terpotong tetap sampai ke cek stop_reason", async () => {
+    const fetch = vi.fn(async () =>
+      Response.json({
+        id: "msg_test",
+        type: "message",
+        role: "assistant",
+        model: "claude-haiku-4-5-20251001",
+        content: [{ type: "text", text: JSON.stringify(OUTPUT).slice(0, 40) }],
+        stop_reason: "max_tokens",
+        stop_sequence: null,
+        usage: { input_tokens: 10, output_tokens: 400 },
+      }),
+    );
+    const client = new Anthropic({ apiKey: "sk-test", fetch, maxRetries: 0 });
+    deadline = createDeadline(8000);
+    const err = await errorOf(anthropicParser({ client, model: "claude-haiku-4-5" }).parse(TEXT, ctx, deadline));
+    expect(fetch).toHaveBeenCalledTimes(1);
+    expect(err.code).toBe("invalid_output");
+    expect(err.detail).toBe("max_tokens");
   });
 
   test("AnthropicError non-API (gagal parse) → invalid_output, dipanggil sekali", async () => {
