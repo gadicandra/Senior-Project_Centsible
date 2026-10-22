@@ -13,6 +13,7 @@ export async function requestOrigin() {
 export function safeNext(next: string | null | undefined, fallback = "/") {
   return next && next.startsWith("/") && !next.startsWith("//") ? next : fallback;
 }
+
 /**
  * CSRF untuk Route Handler: Origin wajib ada dan host-nya harus sama dengan `x-forwarded-host ?? host`
  * (sama seperti cek bawaan Server Action). Hanya host yang dibandingkan, bukan protokol, supaya
