@@ -91,9 +91,11 @@ type Props = {
 
 /** Kartu konfirmasi hasil baca AI (design §10.4). Satu-satunya jalan simpan adalah tombol Simpan. */
 export function ConfirmCard({ result, raw, open, onCancel, ...rest }: Props) {
+  // Selama Simpan berjalan, Esc/overlay/× diabaikan: kalau kartu ditutup, simpan tetap jalan tanpa toast (§10.4).
+  const [saving, setSaving] = useState(false);
   return (
-    <Dialog open={open} onOpenChange={(next) => !next && onCancel()}>
-      <DialogContent className="max-h-[90dvh] overflow-y-auto">
+    <Dialog open={open} onOpenChange={(next) => !next && !saving && onCancel()}>
+      <DialogContent className="max-h-[90dvh] overflow-y-auto" aria-busy={saving}>
         <DialogHeader>
           <DialogTitle>Periksa hasil baca AI</DialogTitle>
         </DialogHeader>
@@ -101,7 +103,13 @@ export function ConfirmCard({ result, raw, open, onCancel, ...rest }: Props) {
           <>
             {/* Teks mentah selalu dirender sebagai text node. */}
             <blockquote className="border-l-2 pl-3 break-words text-muted-foreground italic">{raw}</blockquote>
-            <ConfirmForm key={result.draft} result={result} onCancel={onCancel} {...rest} />
+            <ConfirmForm
+              key={result.draft}
+              result={result}
+              onCancel={onCancel}
+              onPendingChange={setSaving}
+              {...rest}
+            />
           </>
         )}
       </DialogContent>
@@ -117,10 +125,19 @@ function ConfirmForm({
   onCancel,
   onDone,
   onSwitchToManual,
-}: Omit<Props, "raw" | "open" | "result"> & { result: ParseSuccess }) {
+  onPendingChange,
+}: Omit<Props, "raw" | "open" | "result"> & { result: ParseSuccess; onPendingChange: (pending: boolean) => void }) {
   const { proposal, flags, amountOptions, walletInferred, draft } = result;
-  const [state, formAction] = useActionState(saveAiTransaction, initialFormState);
+  const [state, formAction, isPending] = useActionState(saveAiTransaction, initialFormState);
   const formRef = useRef<HTMLFormElement>(null);
+  // Penjaga sinkron: submit kedua di tick yang sama terjadi sebelum isPending sempat dirender.
+  const submittingRef = useRef(false);
+
+  useEffect(() => {
+    if (!isPending) submittingRef.current = false;
+    onPendingChange(isPending);
+  }, [isPending, onPendingChange]);
+  useEffect(() => () => onPendingChange(false), [onPendingChange]);
   const [type, setType] = useState<EntryKind>(() => (state.values?.type as EntryKind) ?? proposal.type);
   const [amount, setAmount] = useState(() => state.values?.amount ?? proposal.amount.toLocaleString("id-ID"));
 
@@ -158,7 +175,20 @@ function ConfirmForm({
   }
 
   return (
-    <form ref={formRef} action={formAction} noValidate>
+    <form
+      ref={formRef}
+      action={formAction}
+      noValidate
+      aria-busy={isPending}
+      onSubmit={(e) => {
+        // preventDefault membuat React tidak menjalankan action (Simpan dua kali → satu panggilan).
+        if (submittingRef.current) e.preventDefault();
+        else submittingRef.current = true;
+      }}
+    >
+      <p aria-live="polite" className="sr-only">
+        {isPending ? "Menyimpan… Kartu tidak bisa ditutup sampai selesai." : ""}
+      </p>
       <input type="hidden" name="draft" value={draft} />
       <input type="hidden" name="type" value={type} />
       <FieldGroup className="gap-4">
@@ -243,14 +273,20 @@ function ConfirmForm({
         />
         <div className="flex flex-col gap-2">
           <div className="flex justify-end gap-2">
-            <Button type="button" variant="outline" className="min-h-11" onClick={onCancel}>
+            <Button type="button" variant="outline" className="min-h-11" disabled={isPending} onClick={onCancel}>
               Batal
             </Button>
             <SubmitButton pendingText="Menyimpan…" className="min-h-11">
               Simpan
             </SubmitButton>
           </div>
-          <Button type="button" variant="link" className="min-h-11 self-end" onClick={switchToManual}>
+          <Button
+            type="button"
+            variant="link"
+            className="min-h-11 self-end"
+            disabled={isPending}
+            onClick={switchToManual}
+          >
             Ubah ke form manual
           </Button>
         </div>

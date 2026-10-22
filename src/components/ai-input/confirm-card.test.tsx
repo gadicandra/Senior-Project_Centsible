@@ -60,8 +60,21 @@ const describedText = (el: HTMLElement) =>
     .map((id) => document.getElementById(id)?.textContent ?? "")
     .join(" ");
 
+const SAVED = { ok: true as const, message: "Transaksi disimpan." };
+let release: (() => void) | undefined;
+
+/** Simpan berikutnya menggantung sampai `finish()`; selalu dilepas di afterEach supaya transisi React tidak tertahan. */
+function holdSave() {
+  save.mockImplementationOnce(() => new Promise((resolve) => (release = () => resolve(SAVED))));
+  return () => act(async () => release?.());
+}
+
 beforeEach(() => save.mockClear());
-afterEach(cleanup);
+afterEach(async () => {
+  await act(async () => release?.());
+  release = undefined;
+  cleanup();
+});
 
 describe("ConfirmCard", () => {
   test("judul, teks mentah sebagai text node, dan kontrol berlabel", () => {
@@ -131,6 +144,50 @@ describe("ConfirmCard", () => {
     fireEvent.click(screen.getByRole("button", { name: "Batal" }));
     expect(onCancel).toHaveBeenCalledTimes(1);
     expect(save).not.toHaveBeenCalled();
+  });
+
+  test("Esc menutup kartu bila tidak sedang menyimpan", () => {
+    const { onCancel } = renderCard(result());
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    expect(onCancel).toHaveBeenCalledTimes(1);
+  });
+
+  test("selama menyimpan: Batal/manual disabled, Esc diabaikan, status diumumkan", async () => {
+    const finish = holdSave();
+    const { onCancel, onDone } = renderCard(result());
+    fireEvent.click(screen.getByRole("button", { name: "Simpan" }));
+
+    const batal = (await screen.findByRole("button", { name: "Batal" })) as HTMLButtonElement;
+    await waitFor(() => expect(batal.disabled).toBe(true));
+    expect((screen.getByRole("button", { name: "Ubah ke form manual" }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.getByRole("button", { name: "Menyimpan…" }).getAttribute("aria-busy")).toBe("true");
+    expect(document.querySelector("form")!.getAttribute("aria-busy")).toBe("true");
+    expect(document.querySelector('form [aria-live="polite"]')!.textContent).toContain("tidak bisa ditutup");
+
+    fireEvent.keyDown(screen.getByRole("dialog"), { key: "Escape" });
+    fireEvent.click(batal);
+    expect(onCancel).not.toHaveBeenCalled();
+
+    await finish();
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+    expect(batal.disabled).toBe(false);
+    expect(document.querySelector('form [aria-live="polite"]')!.textContent).toBe("");
+  });
+
+  test("Simpan tidak bisa dikirim dua kali selama pending", async () => {
+    const finish = holdSave();
+    const { onDone } = renderCard(result());
+    const simpan = screen.getByRole("button", { name: "Simpan" });
+    // Dua klik di tick yang sama (sebelum tombol sempat disabled) + submit langsung (mis. Enter).
+    fireEvent.click(simpan);
+    fireEvent.click(simpan);
+    fireEvent.submit(document.querySelector("form")!);
+    await waitFor(() => expect(screen.getByRole("button", { name: "Menyimpan…" })).toBeDefined());
+    fireEvent.submit(document.querySelector("form")!);
+
+    await finish();
+    await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
+    expect(save).toHaveBeenCalledTimes(1);
   });
 
   test("Simpan adalah satu-satunya jalan simpan; sukses memanggil onDone", async () => {
