@@ -4,7 +4,7 @@ title: Catatan Lanjutan Sesi
 
 # Task — Catatan Lanjutan Sesi (Fitur AI Teks, Issue #24–#27)
 
-Terakhir diperbarui: 23 Oktober 2026 (perbaikan peringatan Base UI di beranda, cek kesiapan deploy Vercel/Supabase, issue #10 ditutup, Laporan 7).
+Terakhir diperbarui: 23 Oktober 2026 (perbaikan peringatan Base UI di beranda, cek kesiapan deploy Vercel/Supabase, issue #10 ditutup, Laporan 7, akun uji E2E dihapus).
 
 File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sudah berbeda dari `main`, apa yang sedang berjalan, apa yang belum dikerjakan sampai deploy, dan checklist untuk semuanya.
 
@@ -22,7 +22,7 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
 | Pull request | [#46](https://github.com/gadicandra/Senior-Project_Centsible/pull/46) ke `main`. Status 23 Okt: **OPEN**, `MERGEABLE`/`CLEAN`, CI hijau (lint/typecheck/test/build + deploy preview Vercel), belum ada review dari anggota |
 | Issue yang ditutup PR ini | #24, #25, #26, #27 (lewat `Closes #N`) |
 | Supabase dev | project ref `cvwkkdzvxivpavqiabsg`. Sempat di-pause, sudah dipulihkan 22 Okt |
-| Uji langsung AI | Lulus 23 Okt lewat 9router lokal (`cc/claude-haiku-4-5-20251001`), akun uji dev `e2e-ai+20261023@centsible.test` **masih ada** (dipakai lagi untuk cek beranda; dihapus setelah review, lihat 5.1) |
+| Uji langsung AI | Lulus 23 Okt lewat 9router lokal (`cc/claude-haiku-4-5-20251001`), akun uji dev `e2e-ai+20261023@centsible.test` **sudah dihapus** 23 Okt setelah review (lihat 5.1) |
 | Vercel | Fungsi berjalan di **hnd1** (Tokyo), sama dengan Supabase dev (ap-northeast-1). Production memakai project Supabase dev. Preview belum punya env Supabase/database |
 | Catatan kerja agent | `.agents/tasks/centsible-ai-text-path/` (design.md, plan.md, review, report-evidence/) |
 | Laporan | `../Laporan 5 - Tugas Kelompok - MDG Centsible.docx` (+ .pdf), `../Laporan 6 - ...docx` (+ .pdf), `../Laporan 7 - Tugas Kelompok - MDG Centsible.docx` (+ .pdf, 13 halaman, periode 23–29 Okt) |
@@ -142,7 +142,7 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
   - Log `pnpm dev`: hanya baris JSON `ai_parse`/`ai_fallback`/`ai_save` tanpa teks pengguna; pencarian kalimat uji, email, dan token draf di log = 0 baris. Logger Server Function bawaan Next (dev) mencetak `signIn({}, {})` dan `saveAiTransaction({}, {})`, jadi tidak ada data yang bocor.
   - Tidak ada fallback karena terjemahan format 9router; semua jawaban lolos validasi skema pada percobaan pertama.
 - [x] (Opsional) Ambil screenshot kartu konfirmasi AI yang sungguhan dan ganti keterangan di Laporan 6 yang menyebut "diverifikasi lewat tes otomatis". Screenshot kartu (dipotong ke kartunya saja) ditambahkan sebagai **Gambar 7** baru di #26; Gambar 7–8 lama menjadi 8–9 dan poin "c." lama menjadi "d.". Kalimat "dicek lewat tes otomatis" di Rangkuman, poin b, dan Kendala 3 diganti dengan keterangan uji langsung lewat 9router. PDF dibuat ulang (10 → 11 halaman). Cadangan sebelum edit: `Laporan 6 … .BACKUP-2026-10-23-b.docx`/`.pdf`.
-- [ ] Hapus akun uji E2E `e2e-ai+20261023@centsible.test` di dev kalau bukti sudah tidak diperlukan (Admin API `deleteUser`, data ikut terhapus lewat cascade).
+- [x] Hapus akun uji E2E `e2e-ai+20261023@centsible.test` di dev kalau bukti sudah tidak diperlukan (Admin API `deleteUser`, data ikut terhapus lewat cascade). **Dihapus 23 Okt** setelah review wrap-up disetujui. Query read-only setelahnya: `auth.users`, `users`, `transactions`, `ai_extractions` untuk akun itu = 0 baris (sebelumnya 1 user, 3 transaksi, 3 `ai_extractions`), jadi cascade berjalan. Kalau perlu screenshot lagi, buat ulang akun lewat Admin API.
 - [x] Peringatan dev Base UI di beranda: tombol "Lihat transaksi" (`HomeScreen`) merender non-`<button>` padahal `nativeButton` true. Muncul sebagai "1 Issue" di indikator dev Next. **Diperbaiki di `157ae65` (23 Okt).**
   - Cara: `<Link href="/transaksi" className={buttonVariants({ className: "self-start" })}>`, tidak lagi `Button` Base UI 1.8.0 dengan `render={<Link />}`. `nativeButton={false}` (saran awal) juga menghilangkan peringatan, tetapi Base UI lalu memberi `role="button"` ke `<a>` (mui/base-ui#4021) sehingga pembaca layar mengumumkan tombol, bukan tautan. Tampilan sama, peran tautan tetap.
   - Tes baru di `home-screen.test.tsx`: tautan "Lihat transaksi" → `/transaksi` dan tidak ada `console.error` berisi `nativeButton`. Tes harus berjalan pertama di file karena Base UI hanya mencatat peringatan sekali per proses. Tes ini gagal tanpa perbaikan.
