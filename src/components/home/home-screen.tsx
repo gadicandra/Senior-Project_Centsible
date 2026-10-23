@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { AiCapture } from "@/components/ai-input/ai-capture";
 import type { CategoryOption, WalletOption } from "@/components/transaksi/types";
-import { Button } from "@/components/ui/button";
+import { buttonVariants } from "@/components/ui/button";
 import { formatRupiah } from "@/lib/money";
 
 type WalletBalance = WalletOption & { balance: number };
@@ -37,9 +37,10 @@ export function HomeScreen({
           </li>
         ))}
       </ul>
-      <Button className="self-start" render={<Link href="/transaksi" />}>
+      {/* Tautan bergaya tombol: Base UI Button hanya untuk tombol sungguhan (peran "button"). */}
+      <Link href="/transaksi" className={buttonVariants({ className: "self-start" })}>
         Lihat transaksi
-      </Button>
+      </Link>
       <AiCapture
         categories={categories}
         wallets={wallets.map(({ id, name, isDefault, isArchived }) => ({ id, name, isDefault, isArchived }))}

@@ -1,8 +1,24 @@
-import { render, screen } from "@testing-library/react";
-import { expect, test, vi } from "vitest";
+import { cleanup, render, screen } from "@testing-library/react";
+import { afterEach, expect, test, vi } from "vitest";
 import { HomeScreen } from "./home-screen";
 
 vi.mock("@/server/actions/transactions", () => ({ saveAiTransaction: vi.fn(), saveTransaction: vi.fn() }));
+
+afterEach(() => {
+  cleanup();
+});
+
+// Base UI hanya mencatat peringatan ini sekali per proses, jadi tes ini harus merender paling awal.
+test("HomeScreen merender Lihat transaksi sebagai tautan tanpa peringatan nativeButton", () => {
+  const error = vi.spyOn(console, "error").mockImplementation(() => {});
+  try {
+    render(<HomeScreen displayName="Adi" wallets={[]} categories={[]} today="2026-09-23" />);
+    expect(screen.getByRole("link", { name: "Lihat transaksi" }).getAttribute("href")).toBe("/transaksi");
+    expect(error.mock.calls.some((args) => args.some((a) => String(a).includes("nativeButton")))).toBe(false);
+  } finally {
+    error.mockRestore();
+  }
+});
 
 test("HomeScreen menyapa pengguna dan menjumlah saldo dompet", () => {
   render(
