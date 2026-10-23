@@ -108,7 +108,8 @@ Catatan: issue #10 (struktur basis data) masih terbuka. Dokumennya sudah di-merg
 
 ## Hal yang perlu dicek sebelum merge
 
-- [ ] `pnpm test:db` ke Supabase dev belum lulus semua. Hasil terakhir: 28 dari 29 tes lulus, 1 tes gagal. Tes yang gagal mengecek bahwa pengguna tidak boleh mengubah atau menghapus baris `ai_extractions`. Penyebabnya: database dev memberi hak `UPDATE`/`DELETE` lebih dari yang ada di migrasi. Perlu keputusan tim: cabut hak itu di dev, atau tambahkan `revoke` di migrasi baru.
+- [x] `pnpm test:db` ke Supabase dev lulus semua (29 dari 29). Sebelumnya 1 tes gagal karena database dev memberi hak lebih dari yang ada di migrasi, di semua tabel (sisa pengaturan bawaan Supabase lama). Hak itu sudah dicabut lewat migrasi baru `20261023120000_revoke_extra_grants`, dan tabel baru tidak lagi otomatis mendapat hak tersebut. Migrasi ini juga perlu diterapkan ke database production kalau berbeda dari dev.
+- [ ] Putuskan bersama tim soal error Prisma P2028 (transaksi database gagal dimulai tepat waktu). Hasil pengecekan: error hanya muncul sesaat setelah database dev dipulihkan dan tidak muncul lagi di 3 kali tes berikutnya. Rekomendasinya belum perlu mengubah kode.
 - [ ] Uji langsung ke LLM dengan model non-thinking, misalnya `claude-haiku-4-5`. Sampai sekarang alur AI baru dicek lewat tes otomatis, karena kunci AI belum diisi.
 - [ ] Isi variabel lingkungan AI di Vercel (Preview dan Production).
 - [ ] Buat `AI_DRAFT_SECRET` dengan `openssl rand -hex 32`, lalu simpan di Vercel. Jangan simpan nilainya di repositori.

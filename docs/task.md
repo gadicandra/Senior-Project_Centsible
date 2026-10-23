@@ -82,7 +82,7 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
 ## 4. Checklist — sedang berjalan / menunggu
 
 - [ ] **Supabase MCP aktif di sesi baru.** Config sudah ada, tapi tool baru muncul di sesi chat baru. Pastikan statusnya hijau di panel MCP Servers (login OAuth di browser).
-- [ ] **1 tes database gagal** (`pnpm test:db`: 28/29 lulus). Tes yang gagal memastikan pengguna tidak bisa UPDATE/DELETE `ai_extractions`. Penyebab: role `authenticated` di database dev punya hak `UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER` yang tidak ada di migrasi (kemungkinan sisa grant bawaan Supabase lama). Data tetap aman karena tidak ada policy RLS untuk itu.
+- [x] **1 tes database gagal** (`pnpm test:db`: 28/29 lulus). Tes yang gagal memastikan pengguna tidak bisa UPDATE/DELETE `ai_extractions`. Penyebab: role `authenticated` di database dev punya hak `UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER` yang tidak ada di migrasi (sisa default privileges Supabase lama). Sudah diperbaiki lewat migrasi `20261023120000_revoke_extra_grants`; sekarang **29/29** lulus (lihat 5.1).
 - [ ] **PR #46 menunggu review anggota tim.**
 - [ ] **Pembagian kontribusi di Laporan 5 dan 6** masih perkiraan berdasarkan role; perlu disesuaikan tim.
 
@@ -91,13 +91,33 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
 ### 5.1 Sebelum merge PR #46
 
 - [ ] Rapikan `main` lokal: commit `45dae9e` (menambah `docs/task.md` ke `.gitignore`) tidak dibutuhkan lagi karena `task.md` sekarang ikut di repo. Pilih: buang commit itu (`git branch -f main origin/main` saat sedang di branch lain) dan hapus stash `gitignore: hapus baris docs/task.md`, atau simpan kalau masih perlu.
-- [ ] Di sesi baru, cek lewat Supabase MCP (read-only):
-  - [ ] hak akses tabel `ai_extractions` untuk `authenticated` (`information_schema.role_table_grants`)
-  - [ ] cek juga tabel lain (`insights`, `ai_usage_daily`, `users`) apakah punya hak berlebih yang sama
-  - [ ] log Postgres / pooler untuk penyebab error Prisma **P2028** (transaksi gagal dimulai dalam 5 detik)
-- [ ] Buat migrasi baru di branch PR (additive), misalnya `prisma/migrations/2026102xxxxxxx_revoke_extra_grants/migration.sql` berisi `revoke update, delete, truncate, references, trigger on public.ai_extractions from authenticated;` (+ tabel lain kalau ternyata sama). Terapkan ke dev dengan `prisma migrate deploy`. Jangan pakai SQL langsung lewat MCP untuk perbaikan permanen.
-- [ ] Jalankan ulang `pnpm test:db` sampai **29/29** lulus.
-- [ ] Selidiki/atasi P2028 (koneksi lambat lewat pooler port 6543): cek apakah hanya karena database baru bangun; kalau masih terjadi, pertimbangkan `timeout`/`maxWait` di `withRls` atau setelan pooler. Putuskan bersama tim.
+- [ ] Di sesi baru, cek lewat Supabase MCP (read-only). MCP belum aktif di sesi 23 Okt, jadi pengecekan hak akses dilakukan dengan query `SELECT` saja ke database dev (skrip sementara di luar repo, sudah dihapus):
+  - [x] hak akses tabel `ai_extractions` untuk `authenticated` (`information_schema.role_table_grants`)
+  - [x] cek juga tabel lain (`insights`, `ai_usage_daily`, `users`) apakah punya hak berlebih yang sama
+  - [ ] log Postgres / pooler untuk penyebab error Prisma **P2028**. Log belum bisa dibaca (tidak ada MCP, tidak tersedia lewat SQL). Kalau perlu, cek Logs Explorer untuk rentang 22 Okt 13:20–14:00 UTC.
+- [x] Buat migrasi baru di branch PR (additive): `prisma/migrations/20261023120000_revoke_extra_grants/migration.sql`. Sudah diterapkan ke dev dengan `pnpm db:deploy` (`prisma migrate deploy`), `pnpm db:status` menyatakan skema up to date.
+- [x] Jalankan ulang `pnpm test:db` sampai **29/29** lulus. Sebelum migrasi 28/29, sesudahnya 29/29 (4 file, 63 detik). Lint, typecheck, dan 394 unit test juga lulus.
+- [ ] Selidiki/atasi P2028 (koneksi lambat lewat pooler port 6543). Sudah diselidiki (lihat temuan di bawah): kemungkinan besar hanya terjadi saat database baru bangun. Rekomendasi: belum perlu mengubah kode. Tinggal diputuskan bersama tim.
+
+#### Temuan pengecekan 23 Oktober 2026
+
+- **Hak akses.** Masalahnya lebih luas dari `ai_extractions`. Semua tabel di skema `public` (termasuk view `wallet_balances` dan tabel internal `_prisma_migrations`) memberi `anon`, `authenticated`, dan `service_role` kedelapan hak: SELECT, INSERT, UPDATE, DELETE, TRUNCATE, REFERENCES, TRIGGER, MAINTAIN (MAINTAIN baru ada di PostgreSQL 17). Akibat yang paling terasa:
+  - `_prisma_migrations` tidak punya RLS, jadi bisa dibaca siapa saja yang memegang publishable key lewat Data API (`GET /rest/v1/_prisma_migrations` → HTTP 200 berisi baris).
+  - UPDATE tingkat tabel di `users` dan `insights` membuat pengguna bisa mengubah semua kolom baris miliknya (misalnya `email`), bukan hanya kolom yang diizinkan migrasi 02.
+  - `anon` punya semua hak, tapi karena tidak ada policy RLS untuk `anon`, hasil baca tabel aplikasi tetap 0 baris.
+- **Penyebab.** Project Supabase lama punya *default privileges* untuk role `postgres` di skema `public`: setiap tabel baru otomatis memberi hak penuh ke `anon`, `authenticated`, dan `service_role`. `prisma migrate deploy` berjalan sebagai `postgres`, sedangkan migrasi 02 hanya menambah GRANT dan tidak pernah mencabut.
+- **Migrasi 05 (`20261023120000_revoke_extra_grants`).** Isinya:
+  - cabut semua hak `anon` di tabel/view aplikasi, dan cabut `_prisma_migrations` dari `anon` dan `authenticated`;
+  - sisakan untuk `authenticated` hanya hak dari migrasi 02: SELECT/INSERT/UPDATE/DELETE di `wallets`, `categories`, `transactions`, `budgets`; SELECT + INSERT di `ai_extractions`; SELECT di `ai_usage_daily` dan `wallet_balances`; SELECT + UPDATE per kolom di `users` (`full_name`, `avatar_url`, `currency`, `timezone`) dan `insights` (`is_read`), dipasang ulang karena REVOKE UPDATE tingkat tabel ikut mencabut hak per kolom;
+  - cabut MAINTAIN (dibungkus cek versi supaya tetap jalan di PostgreSQL < 17);
+  - `alter default privileges for role postgres in schema public revoke all on tables from anon, authenticated`, supaya tabel baru tidak lagi otomatis dapat hak.
+  - Semua perintah aman dijalankan ulang. `service_role` sengaja tidak diubah.
+  - Hasil di dev: tidak ada lagi hak `anon` di tabel mana pun, dan `GET /rest/v1/_prisma_migrations` sekarang ditolak (HTTP 401, kode 42501).
+- **Default privileges yang masih terbuka.** Migrasi 05 hanya mengubah default untuk *tabel* milik `postgres`. Sequence dan function baru milik `postgres`, serta objek apa pun milik `supabase_admin`, masih otomatis memberi hak ke `anon`/`authenticated`. Setiap migrasi yang membuat sequence atau function baru wajib menulis REVOKE/GRANT-nya sendiri. Kelebihan hak `service_role` (TRUNCATE, REFERENCES, TRIGGER, MAINTAIN, tulis ke view, `_prisma_migrations`) dicatat sebagai pekerjaan lanjutan; `service_role` memang melewati RLS dan kuncinya hanya ada di server.
+- **P2028.** Prisma 7 punya dua batas yang sama-sama memunculkan P2028: `maxWait` 2 detik (menunggu koneksi + `BEGIN`, ini yang kena di `getProfile` dev server) dan `timeout` 5 detik (seluruh transaksi interaktif, ini yang kena di tes 22 Okt 20:26). Kedua kejadian terjadi dalam 20–35 menit pertama setelah database dipulihkan (Postgres mulai 22 Okt 20:20 WIB). Pada 23 Okt, 3 kali `pnpm test:db` berturut-turut tidak memunculkan P2028 sama sekali. Mulai transaksi butuh ≤ 0,5 detik (sekitar 4× di bawah `maxWait`), satu `withRls` biasa ≤ 0,9 detik.
+  - **Rekomendasi:** jangan ubah `withRls` sekarang. Kalau P2028 muncul lagi saat database sudah "hangat", pilihannya (diputuskan bersama tim): naikkan `maxWait` di `withRls` (misalnya 5 detik), pasang `connectionTimeoutMillis` di `pg.Pool`, atau samakan region database dan Vercel.
+  - **Catatan region:** host pooler Supabase dev ada di **ap-northeast-1 (Tokyo)**, padahal dokumen dan 5.2 menganggap Supabase di Singapura dekat `sin1`. Perlu dicek sebelum deploy.
+- Catatan kerja lengkap: `.agents/tasks/centsible-db-grants/report.md` (tidak di-commit).
 - [ ] Uji langsung ke LLM: isi `.env.local` dengan `AI_TEXT_PROVIDER=anthropic`, `AI_TEXT_MODEL=claude-haiku-4-5` (model yang tidak "thinking"), `ANTHROPIC_API_KEY`, `AI_DRAFT_SECRET` (`openssl rand -hex 32`). Coba beberapa kalimat (gocap, ceban, 25rb, "kemarin", "tadi pagi") → kartu konfirmasi → Simpan → cek baris `ai_extractions`.
 - [ ] (Opsional) Ambil screenshot kartu konfirmasi AI yang sungguhan dan ganti keterangan di Laporan 6 yang menyebut "diverifikasi lewat tes otomatis".
 - [ ] Perbaiki catatan kosmetik reviewer: Gambar 3 di Laporan 6 terlalu tinggi, sulit dibaca saat dicetak.
@@ -107,7 +127,7 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
 ### 5.2 Konfigurasi deploy (Vercel, Fase 1)
 
 - [ ] Isi env AI di Vercel untuk **Preview** dan **Production**: `AI_TEXT_PROVIDER`, `AI_TEXT_MODEL`, `ANTHROPIC_API_KEY`, `AI_PARSE_DAILY_LIMIT`, `AI_DRAFT_SECRET` (nilai beda per lingkungan, jangan disimpan di repo).
-- [ ] Pastikan region Vercel Functions tetap `sin1` (dekat Supabase Singapura).
+- [ ] Pastikan region Vercel Functions tetap `sin1` (dekat Supabase Singapura). Catatan 23 Okt: Supabase dev ternyata di Tokyo (ap-northeast-1), cek region database production juga.
 - [ ] Setelah merge: cek deploy production di https://senior-project-centsible.vercel.app, coba alur AI sekali, cek log Vercel tidak berisi teks mentah pengguna.
 - [ ] Terapkan migrasi revoke ke database yang dipakai production (kalau berbeda dari dev).
 
