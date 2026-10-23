@@ -4,7 +4,7 @@ title: Catatan Lanjutan Sesi
 
 # Task — Catatan Lanjutan Sesi (Fitur AI Teks, Issue #24–#27)
 
-Terakhir diperbarui: 23 Oktober 2026 (sore, Gambar 3 Laporan 6 diperbaiki).
+Terakhir diperbarui: 23 Oktober 2026 (uji langsung AI lewat 9router berhasil, Gambar 7 baru di Laporan 6).
 
 File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sudah berbeda dari `main`, apa yang sedang berjalan, apa yang belum dikerjakan sampai deploy, dan checklist untuk semuanya.
 
@@ -22,6 +22,7 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
 | Pull request | [#46](https://github.com/gadicandra/Senior-Project_Centsible/pull/46) ke `main`. Status: **OPEN**, bisa di-merge, CI hijau (lint/typecheck/test/build + deploy preview Vercel), belum ada review dari anggota |
 | Issue yang ditutup PR ini | #24, #25, #26, #27 (lewat `Closes #N`) |
 | Supabase dev | project ref `cvwkkdzvxivpavqiabsg`. Sempat di-pause, sudah dipulihkan 22 Okt |
+| Uji langsung AI | Lulus 23 Okt lewat 9router lokal (`cc/claude-haiku-4-5-20251001`), akun uji dev `e2e-ai+20261023@centsible.test` dibiarkan sebagai bukti |
 | Catatan kerja agent | `.agents/tasks/centsible-ai-text-path/` (design.md, plan.md, review, report-evidence/) |
 | Laporan | `../Laporan 5 - Tugas Kelompok - MDG Centsible.docx` (+ .pdf), `../Laporan 6 - ...docx` (+ .pdf) |
 
@@ -120,10 +121,17 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
   - **Rekomendasi:** jangan ubah `withRls` sekarang. Kalau P2028 muncul lagi saat database sudah "hangat", pilihannya (diputuskan bersama tim): naikkan `maxWait` di `withRls` (misalnya 5 detik), pasang `connectionTimeoutMillis` di `pg.Pool`, atau samakan region database dan Vercel.
   - **Catatan region:** host pooler Supabase dev ada di **ap-northeast-1 (Tokyo)**, padahal dokumen dan 5.2 menganggap Supabase di Singapura dekat `sin1`. Perlu dicek sebelum deploy.
 - Catatan kerja lengkap: `.agents/tasks/centsible-db-grants/report.md` (tidak di-commit).
-- [ ] Uji langsung ke LLM **lewat 9router** (belum ada `ANTHROPIC_API_KEY`): jalankan 9router lokal (`npm i -g 9router` → `9router`, dashboard `http://localhost:20128`), hubungkan provider Claude Code (OAuth langganan Claude), salin API key dari dashboard. Isi `.env.local`: `AI_TEXT_PROVIDER=openai-compatible`, `AI_TEXT_BASE_URL=http://localhost:20128/v1`, `AI_TEXT_MODEL=cc/claude-haiku-4-5-20251001` (non-thinking), `AI_TEXT_API_KEY=<key 9router>`, `AI_DRAFT_SECRET` (`openssl rand -hex 32`). Restart `pnpm dev`. Coba beberapa kalimat (gocap, ceban, 25rb, "kemarin", "tadi pagi") → kartu konfirmasi → Simpan → cek baris `ai_extractions`. Hanya untuk dev lokal; Vercel tidak bisa menjangkau `localhost`.
-- [ ] (Opsional) Ambil screenshot kartu konfirmasi AI yang sungguhan dan ganti keterangan di Laporan 6 yang menyebut "diverifikasi lewat tes otomatis".
+- [x] Uji langsung ke LLM **lewat 9router** (belum ada `ANTHROPIC_API_KEY`): jalankan 9router lokal (`npm i -g 9router` → `9router`, dashboard `http://localhost:20128`), hubungkan provider Claude Code (OAuth langganan Claude), salin API key dari dashboard. Isi `.env.local`: `AI_TEXT_PROVIDER=openai-compatible`, `AI_TEXT_BASE_URL=http://localhost:20128/v1`, `AI_TEXT_MODEL=cc/claude-haiku-4-5-20251001` (non-thinking), `AI_TEXT_API_KEY=<key 9router>`, `AI_DRAFT_SECRET` (`openssl rand -hex 32`). Restart `pnpm dev`. Coba beberapa kalimat (gocap, ceban, 25rb, "kemarin", "tadi pagi") → kartu konfirmasi → Simpan → cek baris `ai_extractions`. Hanya untuk dev lokal; Vercel tidak bisa menjangkau `localhost`.
+  - **Hasil 23 Okt (pagi), commit `b919216`, tanpa perubahan kode.** UI asli dijalankan dengan Playwright headless (viewport HP, zona waktu Asia/Jakarta) memakai akun uji dev `e2e-ai+20261023@centsible.test` (dibuat lewat Admin API; trigger pendaftaran membuat 1 dompet `Tunai` + 10 kategori).
+  - "makan siang gocap tadi pagi" → 50.000, Makan, Tunai, 23 Okt; "bensin ceban kemarin" → 10.000, Transport, 22 Okt, nominal **dibetulkan jadi 12.000** sebelum Simpan; "kopi 25rb" → 25.000, Makan, 23 Okt. Ketiganya 200 dalam ±2 detik (latensi AI 1,1–1,3 detik, 1 percobaan), tersimpan dengan toast "Transaksi disimpan.". "halo apa kabar" → 422 `ai_not_understood` (`low_confidence`), form manual terbuka, tidak ada yang tersimpan.
+  - Database dev (query read-only): 3 baris `ai_extractions` terhubung ke 3 transaksi `source=text`; `input_mode=text`, `model_version=openai-compatible:claude-haiku-4-5-20251001@p1`, `latency_ms` dan `parsed_result` terisi; `user_corrections` = `{"amount":{"from":10000,"to":12000}}` hanya untuk bensin, `{}` untuk dua lainnya; `ai_usage_daily.parse_count` = 4 (3 berhasil + 1 fallback, kuota dipotong sebelum AI).
+  - Log `pnpm dev`: hanya baris JSON `ai_parse`/`ai_fallback`/`ai_save` tanpa teks pengguna; pencarian kalimat uji, email, dan token draf di log = 0 baris. Logger Server Function bawaan Next (dev) mencetak `signIn({}, {})` dan `saveAiTransaction({}, {})`, jadi tidak ada data yang bocor.
+  - Tidak ada fallback karena terjemahan format 9router; semua jawaban lolos validasi skema pada percobaan pertama.
+- [x] (Opsional) Ambil screenshot kartu konfirmasi AI yang sungguhan dan ganti keterangan di Laporan 6 yang menyebut "diverifikasi lewat tes otomatis". Screenshot kartu (dipotong ke kartunya saja) ditambahkan sebagai **Gambar 7** baru di #26; Gambar 7–8 lama menjadi 8–9 dan poin "c." lama menjadi "d.". Kalimat "dicek lewat tes otomatis" di Rangkuman, poin b, dan Kendala 3 diganti dengan keterangan uji langsung lewat 9router. PDF dibuat ulang (10 → 11 halaman). Cadangan sebelum edit: `Laporan 6 … .BACKUP-2026-10-23-b.docx`/`.pdf`.
+- [ ] Hapus akun uji E2E `e2e-ai+20261023@centsible.test` di dev kalau bukti sudah tidak diperlukan (Admin API `deleteUser`, data ikut terhapus lewat cascade).
+- [ ] Peringatan dev Base UI di beranda: tombol "Lihat transaksi" (`HomeScreen`) merender non-`<button>` padahal `nativeButton` true. Muncul sebagai "1 Issue" di indikator dev Next. Bukan bagian alur AI, belum diperbaiki.
 - [x] Perbaiki catatan kosmetik reviewer: Gambar 3 di Laporan 6 terlalu tinggi, sulit dibaca saat dicetak. Screenshot terminal `pnpm test:db` (sebelum restore) disusun ulang dari piksel aslinya: header perintah, 4 blok `FAIL … AuthRetryableFetchError: fetch failed`, dan ringkasan (4 failed, 29 skipped, exit 1); stack trace yang berulang diganti garis putus-putus, baris panjang dipatah. Ukuran di halaman dari 3,2″ × 7″ menjadi 4,6″ × 5″ (huruf ±8,5 pt). Keterangan, nomor gambar, dan isi lain tidak diubah; PDF dibuat ulang (tetap 10 halaman, hanya halaman 4 yang berubah). Cadangan: `Laporan 6 … .BACKUP-2026-10-23.docx`/`.pdf`.
-- [ ] Update `docs/progres.md` setelah hal di atas selesai.
+- [x] Update `docs/progres.md` setelah hal di atas selesai (butir uji langsung ke LLM dicentang, 23 Okt).
 - [ ] Minta review anggota tim di PR #46, lalu merge (jangan force-push).
 
 ### 5.2 Konfigurasi deploy (Vercel, Fase 1)
