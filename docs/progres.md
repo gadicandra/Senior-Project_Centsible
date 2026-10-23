@@ -21,7 +21,7 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 
 - [x] Menyusun use case diagram — #8
 - [x] Menyusun daftar kebutuhan fungsional — #9
-- [ ] Merancang struktur basis data — #10 (dokumen sudah di-merge lewat PR #39, tapi issue masih terbuka)
+- [x] Merancang struktur basis data — #10 (dokumen di-merge lewat PR #39, issue ditutup 23 Okt)
 - [x] Merancang arsitektur sistem & memilih teknologi — #11 (diselaraskan lagi lewat PR #41)
 
 ### C. Desain Antarmuka
@@ -72,7 +72,7 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 ## Sudah selesai
 
 - Riset pesaing dan penentuan fitur utama (#6, #7).
-- Use case diagram, daftar kebutuhan fungsional, dan arsitektur sistem (#8, #9, #11).
+- Use case diagram, daftar kebutuhan fungsional, struktur basis data, dan arsitektur sistem (#8–#11).
 - Desain antarmuka: palet warna, wireframe, purwarupa, dan komponen dasar (#12–#15).
 - Fondasi proyek: repositori Next.js, papan GitHub Project, CI, Supabase, dan rilis ke Vercel (#16–#20).
 - Fitur inti pencatatan: daftar & masuk, transaksi dengan form manual, serta pengaturan kategori & dompet (#21–#23).
@@ -104,12 +104,12 @@ Urutan di bawah adalah urutan yang direncanakan.
    - #37 Uji coba ke pengguna asli.
    - #38 Menyusun dokumentasi & bahan presentasi.
 
-Catatan: issue #10 (struktur basis data) masih terbuka. Dokumennya sudah di-merge lewat PR #39, dan skemanya sudah dipakai di PR #42. Issue ini tinggal dicek ulang lalu ditutup.
-
 ## Hal yang perlu dicek sebelum merge
 
-- [x] `pnpm test:db` ke Supabase dev lulus semua (29 dari 29). Sebelumnya 1 tes gagal karena database dev memberi hak lebih dari yang ada di migrasi, di semua tabel (sisa pengaturan bawaan Supabase lama). Hak itu sudah dicabut lewat migrasi baru `20261023120000_revoke_extra_grants`, dan tabel baru tidak lagi otomatis mendapat hak tersebut. Migrasi ini juga perlu diterapkan ke database production kalau berbeda dari dev.
+- [x] `pnpm test:db` ke Supabase dev lulus semua (29 dari 29). Sebelumnya 1 tes gagal karena database dev memberi hak lebih dari yang ada di migrasi, di semua tabel (sisa pengaturan bawaan Supabase lama). Hak itu sudah dicabut lewat migrasi baru `20261023120000_revoke_extra_grants`, dan tabel baru tidak lagi otomatis mendapat hak tersebut. Production di Vercel memakai project Supabase yang sama dengan dev, jadi migrasi ini sudah berlaku di sana (dicek 23 Okt).
 - [ ] Putuskan bersama tim soal error Prisma P2028 (transaksi database gagal dimulai tepat waktu). Hasil pengecekan: error hanya muncul sesaat setelah database dev dipulihkan dan tidak muncul lagi di 3 kali tes berikutnya. Rekomendasinya belum perlu mengubah kode.
 - [x] Uji langsung ke LLM dengan model non-thinking (`claude-haiku-4-5` lewat 9router lokal, 23 Okt). "makan siang gocap tadi pagi", "bensin ceban kemarin", dan "kopi 25rb" terbaca benar (50.000, 10.000, 25.000; tanggal sesuai Asia/Jakarta), ketiganya tersimpan dari kartu konfirmasi bersama baris `ai_extractions`. Kalimat yang bukan transaksi dialihkan ke form manual. Log server tidak memuat teks mentah pengguna. Ini hanya untuk dev lokal; Vercel tetap butuh kunci API penyedia AI.
-- [ ] Isi variabel lingkungan AI di Vercel (Preview dan Production).
-- [ ] Buat `AI_DRAFT_SECRET` dengan `openssl rand -hex 32`, lalu simpan di Vercel. Jangan simpan nilainya di repositori.
+- [ ] Isi variabel lingkungan AI di Vercel (Preview dan Production). Sebagian sudah: `AI_DRAFT_SECRET` dan `AI_PARSE_DAILY_LIMIT=100` (23 Okt). `AI_TEXT_PROVIDER`, `AI_TEXT_MODEL`, dan kunci API sengaja belum diisi karena belum ada `ANTHROPIC_API_KEY`, jadi AI di Vercel tetap mati dan form manual tetap jalan.
+- [x] Buat `AI_DRAFT_SECRET` dengan `openssl rand -hex 32`, lalu simpan di Vercel (nilai berbeda untuk Preview dan Production, 23 Okt). Nilainya tidak disimpan di repositori.
+- [x] Peringatan dev Base UI di beranda diperbaiki: "Lihat transaksi" sekarang tautan dengan gaya tombol (23 Okt).
+- [ ] Putuskan bersama tim: Preview di Vercel belum punya env Supabase/database sama sekali, jadi deploy preview belum bisa dipakai login.
