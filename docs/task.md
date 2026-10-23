@@ -4,7 +4,7 @@ title: Catatan Lanjutan Sesi
 
 # Task — Catatan Lanjutan Sesi (Fitur AI Teks, Issue #24–#27)
 
-Terakhir diperbarui: 23 Oktober 2026 (sore).
+Terakhir diperbarui: 23 Oktober 2026 (sore, Gambar 3 Laporan 6 diperbaiki).
 
 File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sudah berbeda dari `main`, apa yang sedang berjalan, apa yang belum dikerjakan sampai deploy, dan checklist untuk semuanya.
 
@@ -122,7 +122,7 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
 - Catatan kerja lengkap: `.agents/tasks/centsible-db-grants/report.md` (tidak di-commit).
 - [ ] Uji langsung ke LLM **lewat 9router** (belum ada `ANTHROPIC_API_KEY`): jalankan 9router lokal (`npm i -g 9router` → `9router`, dashboard `http://localhost:20128`), hubungkan provider Claude Code (OAuth langganan Claude), salin API key dari dashboard. Isi `.env.local`: `AI_TEXT_PROVIDER=openai-compatible`, `AI_TEXT_BASE_URL=http://localhost:20128/v1`, `AI_TEXT_MODEL=cc/claude-haiku-4-5-20251001` (non-thinking), `AI_TEXT_API_KEY=<key 9router>`, `AI_DRAFT_SECRET` (`openssl rand -hex 32`). Restart `pnpm dev`. Coba beberapa kalimat (gocap, ceban, 25rb, "kemarin", "tadi pagi") → kartu konfirmasi → Simpan → cek baris `ai_extractions`. Hanya untuk dev lokal; Vercel tidak bisa menjangkau `localhost`.
 - [ ] (Opsional) Ambil screenshot kartu konfirmasi AI yang sungguhan dan ganti keterangan di Laporan 6 yang menyebut "diverifikasi lewat tes otomatis".
-- [ ] Perbaiki catatan kosmetik reviewer: Gambar 3 di Laporan 6 terlalu tinggi, sulit dibaca saat dicetak.
+- [x] Perbaiki catatan kosmetik reviewer: Gambar 3 di Laporan 6 terlalu tinggi, sulit dibaca saat dicetak. Screenshot terminal `pnpm test:db` (sebelum restore) disusun ulang dari piksel aslinya: header perintah, 4 blok `FAIL … AuthRetryableFetchError: fetch failed`, dan ringkasan (4 failed, 29 skipped, exit 1); stack trace yang berulang diganti garis putus-putus, baris panjang dipatah. Ukuran di halaman dari 3,2″ × 7″ menjadi 4,6″ × 5″ (huruf ±8,5 pt). Keterangan, nomor gambar, dan isi lain tidak diubah; PDF dibuat ulang (tetap 10 halaman, hanya halaman 4 yang berubah). Cadangan: `Laporan 6 … .BACKUP-2026-10-23.docx`/`.pdf`.
 - [ ] Update `docs/progres.md` setelah hal di atas selesai.
 - [ ] Minta review anggota tim di PR #46, lalu merge (jangan force-push).
 
