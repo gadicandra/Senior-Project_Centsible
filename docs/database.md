@@ -251,7 +251,7 @@ Ditulis **satu kali** bersama transaksinya di dalam satu transaksi database (§6
 | `transaction_id` | `uuid` FK **UNIQUE** | tidak | — | FK majemuk `(user_id, transaction_id)`, `ON DELETE CASCADE` |
 | `raw_input` | `text` | tidak | — | Kalimat asli / hasil transkripsi. 1–1000 karakter |
 | `input_mode` | `ai_input_mode` | tidak | — | `text` / `voice` |
-| `parsed_result` | `jsonb` | tidak | — | Usulan mentah AI, wajib objek JSON ([§10](#10-kontrak-kolom-jsonb)) |
+| `parsed_result` | `jsonb` | tidak | — | Usulan AI setelah normalisasi, persis seperti tampil di kartu (kunci sama), wajib objek JSON ([§10](#10-kontrak-kolom-jsonb)) |
 | `user_corrections` | `jsonb` | tidak | `'{}'` | Hanya isian yang benar-benar diubah pengguna |
 | `confidence` | `real` | ya | — | 0–1 |
 | `model_version` | `text` | tidak | — | `"<penyedia>:<model>@<versi prompt>"`, mis. `anthropic:claude-opus-5@p3` |
@@ -581,7 +581,7 @@ select public.consume_ai_quota('parse', 100);  -- mengembalikan sisa kuota hari 
 
 Tiga kolom `jsonb` (`parsed_result`, `user_corrections`, `payload`) fleksibel di basis data, jadi bentuknya harus disepakati di dokumen ini — kalau tidak, query evaluasi akurasi di [§12](#12-query-acuan) akan patah. Semuanya sudah dipaksa berbentuk objek lewat `CHECK jsonb_typeof(...) = 'object'`.
 
-**`ai_extractions.parsed_result`** — usulan mentah AI, persis bentuk skema keluaran §6.1:
+**`ai_extractions.parsed_result`** — usulan AI setelah normalisasi, persis seperti tampil di kartu (kunci sama dengan skema keluaran §6.1). Artinya `confidence` sudah di-*clamp* ke 0–1, `occurred_at` sudah dibatasi (tanggal masa depan atau < 2020 → hari ini), `description` sudah dirapikan (maks. 200 karakter), nama kategori/dompet memakai ejaan milik pengguna, dan `wallet` berisi nama dompet utama bila AI tidak menyebut dompet. Nilai mentah AI **tidak** disimpan, supaya `user_corrections` hanya berisi apa yang benar-benar diubah pengguna di kartu:
 
 ```json
 {
@@ -951,7 +951,7 @@ Ditulis di sini supaya tidak ada yang mengira basis data sudah menjaganya:
 | Nominal wajar ≤ Rp 100 juta (tanda ⚠) | Ambang produk, bukan aturan integritas — bisa berubah tanpa migrasi | Normalisasi §6.3 |
 | Anggaran hanya untuk kategori `expense` | Butuh kolom `kind` yang digandakan di `budgets`; harganya lebih mahal daripada manfaatnya | Server Action anggaran |
 | Transaksi baru tidak memakai dompet/kategori yang sudah diarsipkan | Transaksi lama harus tetap sah, jadi tidak bisa jadi `CHECK` | Daftar pilihan di UI + validasi Server Action |
-| Panjang input teks AI ≤ 300 karakter | Batas produk; basis data hanya memasang pagar longgar 1000 karakter | Route Handler `/api/ai/parse` |
+| Panjang input teks AI: UI 300 / API 500 / DB 1000 karakter | Batas produk di UI (`maxLength` 300); Route Handler menolak > 500 karakter setelah normalisasi; basis data hanya memasang pagar longgar 1000 karakter | Input bar (UI) + Route Handler `/api/ai/parse` (Zod) |
 
 ### 17.2 Hal lain yang perlu diperhatikan
 

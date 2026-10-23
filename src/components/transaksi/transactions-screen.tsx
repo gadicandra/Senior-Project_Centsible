@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useState } from "react";
+import { AiCapture } from "@/components/ai-input/ai-capture";
 import { Button } from "@/components/ui/button";
 import { formatRupiah } from "@/lib/money";
 import { TransactionDialog } from "./transaction-dialog";
@@ -68,7 +69,7 @@ export function TransactionsScreen(props: TransactionsScreenProps) {
         <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
           {Object.values(filters).some(Boolean)
             ? "Tidak ada transaksi yang cocok dengan filter."
-            : "Belum ada transaksi. Mulai dengan tombol “Catat manual”."}
+            : "Belum ada transaksi. Ketik di kolom bawah, mis. “makan siang 25rb”, atau pakai tombol “Catat manual”."}
         </div>
       ) : (
         <TransactionList items={items} categories={categories} wallets={wallets} today={today} />
@@ -94,6 +95,7 @@ export function TransactionsScreen(props: TransactionsScreenProps) {
           </div>
         </nav>
       )}
+      <AiCapture categories={categories} wallets={wallets} today={today} />
     </div>
   );
 }

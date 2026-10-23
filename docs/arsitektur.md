@@ -79,7 +79,7 @@ Migrasi ke Azure = ganti env var + buat resource, **bukan** menulis ulang fitur.
 
 ### 0.2 Hal yang perlu diperhatikan di Fase 1
 
-1. **Claude API: pakai SDK resmi `@anthropic-ai/sdk`, bukan endpoint kompatibilitas OpenAI.** Lapisan kompatibilitas OpenAI milik Anthropic **mengabaikan `response_format`** dan `strict`, sehingga jaminan skema (ADR-06) hilang. Dengan SDK resmi, skema tetap dijamin lewat *Structured Outputs*: `client.messages.parse({ model, output_config: { format: zodOutputFormat(schema) }, ... })`. Skema Zod dibangun per pengguna (`z.enum(kategoriPengguna)`), jadi aturan "model tidak bisa mengarang kategori" tetap berlaku. Model diisi lewat `AI_TEXT_MODEL` (mis. `claude-opus-5`); model yang lebih murah seperti `claude-haiku-4-5` boleh dicoba asalkan lolos target akurasi di dataset evaluasi (§10.2).
+1. **Claude API: pakai SDK resmi `@anthropic-ai/sdk`, bukan endpoint kompatibilitas OpenAI.** Lapisan kompatibilitas OpenAI milik Anthropic **mengabaikan `response_format`** dan `strict`, sehingga jaminan skema (ADR-06) hilang. Dengan SDK resmi, skema tetap dijamin lewat *Structured Outputs*: `client.messages.parse({ model, output_config: { format: jsonSchemaOutputFormat(schema, { transform: false }) }, ... })` (`@anthropic-ai/sdk/helpers/json-schema`, SDK `1.1.0`). **Jangan pakai `zodOutputFormat`**: transform skema bawaannya di 1.1.0 memindahkan `enum` ke `description`, sehingga grammar tidak lagi membatasi kategori/dompet. JSON Schema dibangun manual per pengguna (`enum` berisi nama kategori/dompet miliknya, hanya kata kunci yang didukung API) dan dikirim apa adanya; hasil `parsed_output` tetap divalidasi ulang dengan Zod di server. Jadi aturan "model tidak bisa mengarang kategori" tetap berlaku. Model diisi lewat `AI_TEXT_MODEL` dan **harus model yang tidak "thinking" saat parameter `thinking` tidak dikirim** (mis. `claude-haiku-4-5`): model *thinking-default* menghabiskan `max_tokens` sebelum JSON selesai sehingga semua parse jatuh ke form manual (terlihat di log sebagai `stop_reason: "max_tokens"`). Pilihan model akhir tetap harus lolos target akurasi di dataset evaluasi (§10.2).
 2. **9router tidak menjamin Structured Outputs.** 9router meneruskan request ke penyedia yang berbeda-beda (Claude, Gemini, GLM, …) dengan *fallback* otomatis; apakah `response_format: json_schema` dihormati tergantung penyedia yang akhirnya melayani. Karena itu jalur `openai-compatible` **wajib** memvalidasi hasil dengan Zod dan mencoba ulang satu kali sebelum fallback ke form manual (§6.4). Catat juga model yang benar-benar menjawab di `ai_extractions`, karena akurasi bisa berbeda antar penyedia.
 3. **Vercel tidak bisa menjangkau `localhost`.** Whisper lokal (`localhost:8000`) dan 9router (default `localhost:20128/v1`) hanya bisa dipakai dari `pnpm dev` di laptop yang sama. Untuk **Preview Deployment** di Vercel pilih salah satu:
    - jalankan 9router / Whisper di VPS atau lewat *tunnel* (mis. Cloudflare Tunnel) **dengan API key** — jangan membuka endpoint tanpa autentikasi ke internet; atau
@@ -418,13 +418,14 @@ flowchart LR
 
 **Langkah di server (`/api/ai/parse`):**
 
-1. **Verifikasi sesi** dengan `supabase.auth.getClaims()` → dapat `user_id`.
-2. **Cek kuota** pengguna (mis. 100 panggilan AI/hari) supaya biaya tidak jebol: `select public.consume_ai_quota('parse', 100)` di dalam `withRls()`. Penghitungnya ada di tabel `ai_usage_daily` (hari dihitung menurut zona waktu pengguna); fungsi melempar SQLSTATE `53400` kalau kuota habis.
-3. **Ambil konteks pengguna:** daftar kategori & dompet aktif miliknya, serta zona waktu.
-4. **Bangun skema JSON dinamis** — isian `category` dan `wallet` dibatasi dengan `enum` berisi nama kategori/dompet milik pengguna itu. Dengan mode `strict: true`, model **tidak mungkin** mengarang kategori yang tidak ada.
-5. **Panggil model chat** dengan *Structured Outputs* (`response_format.type = "json_schema"`, `strict: true`), `temperature` rendah, dan batas waktu 8 detik.
-6. **Normalisasi & validasi** hasilnya (lihat 6.3).
-7. **Kembalikan usulan** ke klien → tampil di kartu konfirmasi. **Tidak ada yang ditulis ke `transactions` di langkah ini** (P1).
+1. **Cek Origin** (CSRF): header `Origin` wajib ada dan host-nya harus sama dengan `x-forwarded-host`/`host`; bila `Sec-Fetch-Site` dikirim, nilainya harus `same-origin`. Gagal → `403` sebelum sesi disentuh. Urutan "403 sebelum 401" ini berlaku di dalam handler; permintaan **tanpa sesi** sudah dijawab `401` oleh `proxy.ts` (langkah 2) sebelum handler berjalan, apa pun Origin-nya. Ini aman: tanpa cookie sesi tidak ada yang bisa dipalsukan, sedangkan permintaan lintas-origin yang membawa cookie korban tetap sampai ke handler dan ditolak `403`.
+2. **Verifikasi sesi** dengan `supabase.auth.getClaims()` → dapat `user_id` (`401` bila tidak ada). Untuk `/api/*`, `proxy.ts` menjawab permintaan tanpa sesi dengan **JSON `401`** (bukan redirect ke `/login`, karena `fetch()` akan mengikuti redirect dan menerima HTML); handler tetap memanggil `getClaims()` sendiri.
+3. **Validasi body:** `Content-Type` harus `application/json` (`415`), body maks. 4 KB termasuk body *chunked* tanpa `Content-Length` (`413`), lalu Zod: `{ text }` 1–500 karakter setelah normalisasi (`400`). Semua respons `Cache-Control: no-store`.
+4. **Ambil konteks pengguna lalu cek kuota, dalam satu `withRls()` sebelum model dipanggil:** daftar kategori & dompet aktif, serta zona waktu; kemudian `select public.consume_ai_quota('parse', AI_PARSE_DAILY_LIMIT)` (bawaan 100/hari) supaya biaya tidak jebol. Penghitungnya ada di tabel `ai_usage_daily` (hari dihitung menurut zona waktu pengguna); fungsi melempar SQLSTATE `53400` kalau kuota habis (→ `429`). Transaksi ini selesai sebelum panggilan LLM, jadi kuota tetap terpakai bila AI gagal dan tidak ada koneksi DB yang ditahan selama menunggu model.
+5. **Bangun skema JSON dinamis** — isian `category` dan `wallet` dibatasi dengan `enum` berisi nama kategori/dompet milik pengguna itu. Dengan mode `strict: true`, model **tidak mungkin** mengarang kategori yang tidak ada. Teks pengguna hanya masuk ke pesan *user* dengan pembatas `<transaksi>…</transaksi>`, tidak pernah ke prompt sistem.
+6. **Panggil model chat** dengan *Structured Outputs* (`response_format.type = "json_schema"`, `strict: true`), `temperature` rendah, dan **satu tenggat 8 detik** untuk semua panggilan SDK (termasuk retry), yang juga dibatalkan bila klien memutus koneksi.
+7. **Normalisasi & validasi** hasilnya (lihat 6.3). Nama kategori/dompet dipetakan ke ID hanya dari baris yang dibaca di bawah RLS.
+8. **Kembalikan usulan + draft token bertanda tangan** (HMAC-SHA256 dengan `AI_DRAFT_SECRET`, berlaku 30 menit) ke klien → tampil di kartu konfirmasi. Metadata AI (`raw_input`, `parsed_result`, `confidence`, `model_version`, `latency_ms`) hanya bisa sampai ke `ai_extractions` lewat token ini, jadi tidak bisa dipalsukan browser. **Tidak ada yang ditulis ke `transactions` di langkah ini** (P1).
 
 **Konfigurasi client (keyless, sesuai docs Microsoft Learn terbaru):**
 
@@ -753,9 +754,11 @@ Mengikuti contoh resmi `with-docker` Next.js: tahap `deps` → `builder` (`pnpm 
 | Nama | Contoh | Keterangan |
 |---|---|---|
 | `AI_TEXT_PROVIDER` | `anthropic` \| `openai-compatible` \| `azure` | Memilih implementasi `TextParser` di `src/server/ai/` |
-| `AI_TEXT_MODEL` | `claude-opus-5` | Nama model untuk penyedia terpilih (di 9router: nama model/*combo* yang terdaftar di dashboard-nya) |
+| `AI_TEXT_MODEL` | `claude-haiku-4-5` | Nama model untuk penyedia terpilih (di 9router: nama model/*combo* yang terdaftar di dashboard-nya). Harus model yang tidak "thinking" saat `thinking` tidak dikirim |
 | `ANTHROPIC_API_KEY` | — (rahasia) | Hanya jika `AI_TEXT_PROVIDER=anthropic` |
-| `AI_TEXT_BASE_URL` / `AI_TEXT_API_KEY` | `http://localhost:20128/v1` / — (rahasia) | Hanya jika `openai-compatible` (9router) |
+| `AI_TEXT_BASE_URL` / `AI_TEXT_API_KEY` | `http://localhost:20128/v1` / — (rahasia) | Hanya jika `openai-compatible` (9router). `https` wajib kecuali `localhost`/`127.0.0.1` |
+| `AI_PARSE_DAILY_LIMIT` | `100` | Kuota parse AI per pengguna per hari (bilangan bulat 1–10000; kosong/tidak valid → 100) |
+| `AI_DRAFT_SECRET` | — (rahasia, `openssl rand -hex 32`) | Kunci HMAC draft token AI, minimal 32 karakter. Wajib bila `AI_TEXT_PROVIDER` diisi; tanpa ini AI dianggap mati |
 | `AI_STT_BASE_URL` / `AI_STT_MODEL` | `http://localhost:8000/v1` / `Systran/faster-whisper-small` | Server Whisper lokal (OpenAI-compatible) |
 | `AI_STT_ENABLED` | `true` / `false` | Matikan fitur suara di preview bila Whisper tidak bisa dijangkau dari Vercel |
 | `CRON_SECRET` | — (rahasia) | Melindungi `/api/cron/*` yang dipanggil Vercel Cron |
@@ -878,7 +881,7 @@ Dokumen ini disusun berdasarkan dokumentasi resmi terbaru (diakses September 202
 **Fase 1 (development/preview):**
 
 - Vercel docs — *Functions limitations* (body request/response maks. 4,5 MB), *Cron Jobs* (`crons` di `vercel.json`, `CRON_SECRET`)
-- Claude API docs — *Structured Outputs* (`output_config.format`, `messages.parse` + `zodOutputFormat`) dan *OpenAI SDK compatibility* (`response_format` & `strict` diabaikan; ditujukan untuk uji coba, bukan produksi)
+- Claude API docs — *Structured Outputs* (`output_config.format`, `messages.parse` + `jsonSchemaOutputFormat(schema, { transform: false })`; kata kunci JSON Schema yang didukung, `stop_reason` `refusal`/`max_tokens`) dan *OpenAI SDK compatibility* (`response_format` & `strict` diabaikan; ditujukan untuk uji coba, bukan produksi)
 - 9router — [github.com/decolua/9router](https://github.com/decolua/9router), [9router.com](https://9router.com/) (gateway AI self-hosted, endpoint OpenAI-compatible, *fallback* antar penyedia)
 - Speaches (dulu *faster-whisper-server*) — [github.com/speaches-ai/speaches](https://github.com/speaches-ai/speaches) (Whisper lokal via Docker, `POST /v1/audio/transcriptions`)
 - faster-whisper — [github.com/SYSTRAN/faster-whisper](https://github.com/SYSTRAN/faster-whisper)

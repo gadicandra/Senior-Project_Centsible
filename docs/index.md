@@ -405,7 +405,7 @@ erDiagram
 - Tabel `ai_extractions` sengaja dipisah dari `transactions` karena fungsinya beda: `transactions` adalah data milik pengguna, sedangkan `ai_extractions` adalah catatan kerja AI untuk bahan evaluasi. Kolom `user_corrections` di situlah yang dipakai mengukur dan memperbaiki akurasi AI (FR 5).
 - Kategori yang tidak dipakai lagi hanya ditandai nonaktif (`is_archived`), bukan benar-benar dihapus. Kalau dihapus, transaksi lama akan kehilangan kategorinya.
 
-> **Rancangan teknis lengkapnya ada di [Rancangan Basis Data](database.md)** — tipe kolom, constraint, indeks, kebijakan Row Level Security, data bawaan pengguna baru, dan berkas migrasinya. Dokumen itu juga mencatat setiap perbedaan terhadap ERD di atas beserta alasannya. Untuk gambaran sistem secara keseluruhan, lihat [Arsitektur Sistem](arsitektur.md).
+> **Rancangan teknis lengkapnya ada di [Rancangan Basis Data](database.md)** — tipe kolom, constraint, indeks, kebijakan Row Level Security, data bawaan pengguna baru, dan berkas migrasinya. Dokumen itu juga mencatat setiap perbedaan terhadap ERD di atas beserta alasannya. Untuk gambaran sistem secara keseluruhan, lihat [Arsitektur Sistem](arsitektur.md). Status tugas yang sudah dan belum dikerjakan ada di [Progres Proyek](progres.md).
 
 ### f. Low-fidelity Wireframe
 

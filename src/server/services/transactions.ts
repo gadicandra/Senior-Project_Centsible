@@ -1,7 +1,9 @@
 import "server-only";
 import type { Prisma } from "@/generated/prisma/client";
+import { diffCorrections } from "@/lib/ai/corrections";
 import { dateOnlyToDate, dateToDateOnly } from "@/lib/dates";
 import { TRANSACTION_PAGE_SIZE, type TransactionFilter, type TransactionInput } from "@/lib/schemas/transaction";
+import type { VerifiedDraft } from "@/server/ai/draft-token";
 import { withRls, type JwtClaims, type RlsTx } from "@/server/db/with-rls";
 
 export type TransactionView = {
@@ -90,6 +92,7 @@ async function assertActiveRefs(tx: RlsTx, input: TransactionInput, keep?: { wal
     throw new TransactionError("Kategori ini sudah diarsipkan.", "categoryId");
   }
   if (category.kind !== input.type) throw new TransactionError("Kategori tidak sesuai dengan jenis transaksi.", "categoryId");
+  return { wallet, category };
 }
 
 export async function createTransaction(claims: JwtClaims, input: TransactionInput) {
@@ -107,6 +110,57 @@ export async function createTransaction(claims: JwtClaims, input: TransactionInp
         source: "manual",
       },
     });
+  });
+}
+
+/**
+ * Simpan dari kartu konfirmasi AI (design §10.3): transaksi `source='text'` dan baris ai_extractions
+ * dalam SATU transaksi RLS, jadi gagal di salah satu insert membatalkan keduanya. Metadata AI hanya
+ * dari draft yang sudah diverifikasi HMAC; ID kategori/dompet pilihan pengguna dicek ulang di sini.
+ */
+export async function createTransactionFromAi(claims: JwtClaims, input: TransactionInput, draft: VerifiedDraft) {
+  return withRls(claims, async (tx) => {
+    const { wallet, category } = await assertActiveRefs(tx, input);
+    const trx = await tx.transaction.create({
+      data: {
+        userId: claims.sub,
+        type: input.type,
+        amount: BigInt(input.amount),
+        categoryId: input.categoryId,
+        walletId: input.walletId,
+        description: input.description,
+        occurredAt: dateOnlyToDate(input.occurredAt),
+        source: "text",
+      },
+    });
+    const userCorrections = diffCorrections(
+      { ...draft.parsed, categoryId: draft.ids.categoryId, walletId: draft.ids.walletId },
+      {
+        amount: input.amount,
+        type: input.type,
+        categoryId: category.id,
+        category: category.name,
+        walletId: wallet.id,
+        wallet: wallet.name,
+        description: input.description,
+        occurred_at: input.occurredAt,
+      },
+    );
+    // ai_extractions hanya boleh di-insert oleh `authenticated`; kode ini tidak pernah mengubahnya.
+    await tx.aiExtraction.create({
+      data: {
+        userId: claims.sub,
+        transactionId: trx.id,
+        rawInput: draft.raw,
+        inputMode: "text",
+        parsedResult: draft.parsed,
+        userCorrections,
+        confidence: draft.conf,
+        modelVersion: draft.mv,
+        latencyMs: draft.lat,
+      },
+    });
+    return trx.id;
   });
 }
 

@@ -1,5 +1,5 @@
 import { describe, expect, test } from "vitest";
-import { isGuestOnlyPath, isPublicPath } from "./routes";
+import { isApiPath, isGuestOnlyPath, isPublicPath } from "./routes";
 
 describe("isPublicPath", () => {
   test.each(["/login", "/register", "/reset-password", "/auth/callback", "/auth/confirm", "/api/health"])(
@@ -15,4 +15,8 @@ describe("isPublicPath", () => {
 test("halaman tamu", () => {
   expect(isGuestOnlyPath("/login")).toBe(true);
   expect(isGuestOnlyPath("/update-password")).toBe(false);
+});
+describe("isApiPath", () => {
+  test.each(["/api", "/api/ai/parse", "/api/health"])("%s adalah API", (p) => expect(isApiPath(p)).toBe(true));
+  test.each(["/", "/apix", "/transaksi", "/login"])("%s bukan API", (p) => expect(isApiPath(p)).toBe(false));
 });
