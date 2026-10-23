@@ -16,9 +16,9 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
 
 | Hal | Nilai |
 |---|---|
-| Repo utama | `/media/adi/CodingSpace/Kuliah/Senpro/Senior-Project_Centsible` (branch `main`, commit `e5fe716`) |
-| Worktree fitur | `.worktrees/ai-text-path` |
-| Branch | `feat/25-ai-text-parser` (sudah di-push, HEAD `1f791cd`) |
+| Repo | `/media/adi/CodingSpace/Kuliah/Senpro/Senior-Project_Centsible` (satu folder saja, tanpa worktree) |
+| Branch yang aktif | `feat/25-ai-text-parser` (dibuat dari `main` commit `e5fe716`, sudah di-push) |
+| Cara update | Edit file di repo → `git add` → `git commit` → `git push` (otomatis masuk PR #46) |
 | Pull request | [#46](https://github.com/gadicandra/Senior-Project_Centsible/pull/46) ke `main`. Status: **OPEN**, bisa di-merge, CI hijau (lint/typecheck/test/build + deploy preview Vercel), belum ada review dari anggota |
 | Issue yang ditutup PR ini | #24, #25, #26, #27 (lewat `Closes #N`) |
 | Supabase dev | project ref `cvwkkdzvxivpavqiabsg`. Sempat di-pause, sudah dipulihkan 22 Okt |
@@ -58,7 +58,8 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
 ### Di luar repo (tidak di-commit)
 
 - `~/.kiro/settings/mcp.json`: ditambah server **Supabase MCP** (hosted, `project_ref=cvwkkdzvxivpavqiabsg`, `read_only=true`, `features=database,docs,debugging`) di samping Context7.
-- `.git/info/exclude`: berisi `.worktrees/`.
+- Worktree `.worktrees/ai-text-path` sudah dihapus; kerja sekarang langsung di folder repo pada branch `feat/25-ai-text-parser`.
+- `main` lokal punya 1 commit yang belum di-push (`45dae9e "Add docs to gitignore"`), dan ada stash `gitignore: hapus baris docs/task.md` yang membatalkannya. Perlu dirapikan (lihat 5.1).
 - Laporan 5 dan 6 (docx + pdf) di folder `Senpro/`.
 
 ---
@@ -89,6 +90,7 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
 
 ### 5.1 Sebelum merge PR #46
 
+- [ ] Rapikan `main` lokal: commit `45dae9e` (menambah `docs/task.md` ke `.gitignore`) tidak dibutuhkan lagi karena `task.md` sekarang ikut di repo. Pilih: buang commit itu (`git branch -f main origin/main` saat sedang di branch lain) dan hapus stash `gitignore: hapus baris docs/task.md`, atau simpan kalau masih perlu.
 - [ ] Di sesi baru, cek lewat Supabase MCP (read-only):
   - [ ] hak akses tabel `ai_extractions` untuk `authenticated` (`information_schema.role_table_grants`)
   - [ ] cek juga tabel lain (`insights`, `ai_usage_daily`, `users`) apakah punya hak berlebih yang sama
@@ -132,13 +134,13 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: apa yang sud
 ## 6. Cara melanjutkan di sesi berikutnya
 
 1. Buka sesi chat baru (supaya tool Supabase MCP dan Context7 dimuat).
-2. Minta agent membaca file ini: `docs/task.md` di worktree `.worktrees/ai-text-path` (atau di branch `feat/25-ai-text-parser`).
+2. Minta agent membaca file ini: `docs/task.md` (branch `feat/25-ai-text-parser`).
 3. Mulai dari bagian **5.1**.
-4. Semua kerja kode tetap di worktree `.worktrees/ai-text-path`, branch `feat/25-ai-text-parser`, lalu push ke PR #46.
+4. Semua kerja langsung di folder repo pada branch `feat/25-ai-text-parser` (`git switch feat/25-ai-text-parser` kalau sedang di branch lain), lalu `git add` → `git commit` → `git push` ke PR #46. Jangan membuat worktree baru.
 
 ### Aturan yang tetap berlaku
 
-- Jangan membaca atau menampilkan isi `.env.local`; kalau perlu, salin dengan `cp` ke worktree lalu hapus lagi.
+- Jangan membaca atau menampilkan isi `.env.local`. File itu sudah ada di folder repo dan di-ignore git, jadi tidak perlu disalin ke mana-mana.
 - Supabase MCP dipakai read-only untuk mengecek; perubahan permanen lewat migrasi di repo.
 - Tes database hanya ke project **dev**.
 - Baca panduan Next.js di `node_modules/next/dist/docs/` sebelum menulis kode Next.js (lihat `AGENTS.md`).
