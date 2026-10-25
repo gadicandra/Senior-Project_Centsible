@@ -4,7 +4,7 @@ title: Catatan Lanjutan Sesi
 
 # Task — Catatan Lanjutan Sesi (Setelah PR #46, Menuju Fitur 5.3)
 
-Terakhir diperbarui: 25 Oktober 2026 (#30: halaman `/ringkasan` selesai diimplementasi dan dites di branch `feat/30-ringkasan`, commit `7699fc0`; tinggal cek tampilan 390 px dan PR). Sebelumnya, 23 Oktober 2026: PR #46 di-merge, Production dan Preview lulus smoke test dengan AI mati, region diperbaiki ke `hnd1`, log P2028 tidak menunjukkan error server.
+Terakhir diperbarui: 25 Oktober 2026 (#30: halaman `/ringkasan` selesai diimplementasi dan dites di branch `feat/30-ringkasan`, commit `7699fc0`; cek tampilan 390 px dan cek silang SQL lulus, ada temuan garis tepi tombol bulan; tinggal hapus akun uji dan PR). Sebelumnya, 23 Oktober 2026: PR #46 di-merge, Production dan Preview lulus smoke test dengan AI mati, region diperbaiki ke `hnd1`, log P2028 tidak menunjukkan error server.
 
 File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: posisi repo dan deploy, apa yang sudah selesai, apa yang masih terbuka, dan urutan fitur berikutnya.
 
@@ -121,7 +121,9 @@ Tanpa kunci AI:
    - [x] Tinjauan ulang desain iterasi 3 (25 Okt): `APPROVED`, 0 HIGH/MEDIUM, 2 NIT (format tanggal di `<title>` tiap batang belum ditentukan; `gap-4` membuat header mobile sekitar 48 px lebih tinggi, usul `gap-x-4 gap-y-1`). Boleh ditutup saat implementasi.
    - [x] Implementasi + tes (25 Okt, commit `7699fc0`): `src/lib/summary.ts` (bulan, zero-fill harian, persen largest-remainder), `services/summary.ts` (satu `withRls`), route `/ringkasan` + `loading.tsx`, komponen `src/components/ringkasan/`, nav "Ringkasan", tautan "Lihat ringkasan" di Beranda, `docs/arsitektur.md` §4 + baris FR 12. Tes baru: 28 unit `summary`, 3 service (mock), 19 komponen, 2 nav, `tests/db/summary.test.ts` 5/5. Total `pnpm test` 447 lulus, `pnpm test:db` 34/34, lint/typecheck/build lulus. Tanpa migrasi dan dependensi baru.
      - Catatan: `@testing-library/jest-dom` tidak terpasang, jadi cek deskripsi aksesibel grafik membaca `aria-describedby` → `<figcaption>`. Dua NIT tinjauan terakhir ditutup (format `<title>` batang "12 Okt: …", header `gap-x-4 gap-y-1`).
-   - [ ] Cek tampilan 390 px (screenshot ke `evidence/`).
+   - [x] Cek tampilan 390 px (25 Okt): `pnpm dev` + Playwright (Chrome headless, 390×844, `Asia/Jakarta`), 2 akun uji sementara di Supabase dev (satu berisi 11 transaksi Sep–Okt + dompet arsip, satu kosong). 6 screenshot di `.agents/tasks/centsible-30-ringkasan/evidence/`, ringkasan di `visual-verify.md`. Cek silang SQL read-only: total saldo, pemasukan/pengeluaran/selisih Oktober, 5 kategori (persen total 100), September, dan akun kosong semuanya cocok. Tidak ada scroll horizontal (`scrollWidth` 390), tidak ada error console.
+     - Temuan: tombol bulan yang aktif tidak bergaris tepi, sedangkan placeholder nonaktif bergaris. Dugaan penyebab: `buttonVariants` dipakai tanpa `cn(...)` pada `Link`, jadi `border-transparent` menang atas `border-border`. Hal yang sama ada di tautan "Lihat ringkasan" di Beranda. Belum diperbaiki.
+     - [ ] Hapus 2 akun uji sementara (id tercatat di `visual-verify.md`).
    - [ ] PR `Closes #30` + cek Vercel Preview.
 2. [ ] #31 Batas anggaran per kategori.
 3. [ ] #34 Unduh data ke CSV.
