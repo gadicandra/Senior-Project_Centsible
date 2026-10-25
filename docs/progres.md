@@ -56,7 +56,7 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 
 ### G. Analitik & Insight
 
-- [ ] Membuat halaman ringkasan & perhitungan datanya — #30
+- [ ] Membuat halaman ringkasan & perhitungan datanya — #30 (selesai di branch `feat/30-ringkasan`, PR belum dibuat)
 - [ ] Membuat fitur batas anggaran per kategori — #31
 - [ ] Membuat ringkasan mingguan dari AI — #32
 - [ ] Membuat deteksi pengeluaran tidak wajar & peringatannya — #33
@@ -80,14 +80,16 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 
 ## Sedang dikerjakan / menunggu review
 
-Belum ada fitur yang sedang dikerjakan. Pekerjaan berikutnya dimulai dari daftar di bawah, satu branch dari `main` dan satu PR per issue.
+- #30 Halaman ringkasan bulanan `/ringkasan` (branch `feat/30-ringkasan`, 25 Okt). Isinya total saldo dompet aktif, pemasukan, pengeluaran, selisih, pengeluaran per kategori (persentase selalu berjumlah 100%), dan grafik tren harian. Bulan bisa dipilih lewat `?month=YYYY-MM`. Semua angka dihitung di server dalam satu `withRls`, tanpa migrasi dan tanpa library baru. Desain dan kode sudah direview (APPROVED). `pnpm test` 447 lulus, `pnpm test:db` 34/34 lulus, lint, typecheck, dan build berhasil. Tampilan 390 px dicek dan angkanya dicocokkan dengan query SQL ke database dev.
+  - Sisa sebelum PR: tombol bulan yang aktif belum bergaris tepi (gaya tombol pada tautan belum lewat `cn(...)`), lalu hapus 2 akun uji sementara dan buka PR `Closes #30`.
+
+Pekerjaan berikutnya dimulai dari daftar di bawah, satu branch dari `main` dan satu PR per issue.
 
 ## Belum dikerjakan / direncanakan
 
 Urutan di bawah adalah urutan yang direncanakan. Fitur yang tidak butuh kunci AI dikerjakan dulu, karena bisa dites dan dirilis sekarang.
 
 1. Tanpa kunci AI:
-   - #30 Halaman ringkasan & perhitungan datanya.
    - #31 Batas anggaran per kategori.
    - #34 Unduh data ke CSV.
    - #36 Membuat aplikasi jadi PWA & bisa dipakai offline.
