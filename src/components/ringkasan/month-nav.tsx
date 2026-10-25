@@ -4,7 +4,8 @@ import { buttonVariants } from "@/components/ui/button";
 import { formatMonthLabel, shiftMonth } from "@/lib/summary";
 import { cn } from "@/lib/utils";
 
-const control = buttonVariants({ variant: "outline", size: "sm" });
+// cn() wajib: tanpa tailwind-merge, `border-transparent` dari kelas dasar menang atas `border-border` varian outline.
+const control = cn(buttonVariants({ variant: "outline", size: "sm" }));
 
 function MonthControl({ target, currentMonth, label, icon }: { target: string | null; currentMonth: string; label: string; icon: React.ReactNode }) {
   // Di batas rentang: bukan tautan dan tanpa nama aksesibel, hanya penjaga tata letak.

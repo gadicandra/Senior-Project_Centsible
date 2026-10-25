@@ -15,6 +15,10 @@ test("HomeScreen merender Lihat transaksi sebagai tautan tanpa peringatan native
     render(<HomeScreen displayName="Adi" wallets={[]} categories={[]} today="2026-09-23" />);
     expect(screen.getByRole("link", { name: "Lihat transaksi" }).getAttribute("href")).toBe("/transaksi");
     expect(screen.getByRole("link", { name: "Lihat ringkasan" }).getAttribute("href")).toBe("/ringkasan");
+    // Varian outline harus bergaris tepi: cn() membuang border-transparent dari kelas dasar.
+    const outline = screen.getByRole("link", { name: "Lihat ringkasan" }).className.split(/\s+/);
+    expect(outline).toContain("border-border");
+    expect(outline).not.toContain("border-transparent");
     expect(error.mock.calls.some((args) => args.some((a) => String(a).includes("nativeButton")))).toBe(false);
   } finally {
     error.mockRestore();

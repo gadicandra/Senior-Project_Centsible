@@ -3,6 +3,7 @@ import { AiCapture } from "@/components/ai-input/ai-capture";
 import type { CategoryOption, WalletOption } from "@/components/transaksi/types";
 import { buttonVariants } from "@/components/ui/button";
 import { formatRupiah } from "@/lib/money";
+import { cn } from "@/lib/utils";
 
 type WalletBalance = WalletOption & { balance: number };
 
@@ -42,7 +43,7 @@ export function HomeScreen({
         <Link href="/transaksi" className={buttonVariants()}>
           Lihat transaksi
         </Link>
-        <Link href="/ringkasan" className={buttonVariants({ variant: "outline" })}>
+        <Link href="/ringkasan" className={cn(buttonVariants({ variant: "outline" }))}>
           Lihat ringkasan
         </Link>
       </div>

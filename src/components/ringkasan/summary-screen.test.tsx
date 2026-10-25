@@ -83,6 +83,14 @@ describe("SummaryScreen", () => {
       expect(screen.queryByRole("link", { name: "Bulan sebelumnya" })).toBeNull();
       expect(screen.getByRole("link", { name: "Bulan berikutnya" }).getAttribute("href")).toBe("/ringkasan?month=2020-02");
     });
+    test("tautan aktif bergaris tepi seperti placeholder nonaktif (border-border, bukan border-transparent)", () => {
+      render(<SummaryScreen summary={summary("2026-09")} currentMonth="2026-10" today="2026-10-25" />);
+      for (const name of ["Bulan sebelumnya", "Bulan berikutnya"]) {
+        const classes = screen.getByRole("link", { name }).className.split(/\s+/);
+        expect(classes).toContain("border-border");
+        expect(classes).not.toContain("border-transparent");
+      }
+    });
   });
 
   test("daftar kategori: urutan, persen, tautan, dan label arsip", () => {
