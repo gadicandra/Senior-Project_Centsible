@@ -115,7 +115,8 @@ Tanpa kunci AI:
    - [x] Temuan skema: belum ada konsep transfer (`entry_kind` hanya `income|expense`), jadi tidak ada yang perlu dikecualikan. `occurred_at` bertipe `date` lokal pengguna, jadi pengelompokan per hari tidak butuh konversi zona waktu. `category_id` wajib, jadi tidak ada transaksi tanpa kategori.
    - [x] Tinjauan mandiri desain (iterasi 2, 25 Okt): grant `wallet_balances` dicek di migrasi 04/05, kode `getSummary` dibuat final (satu `withRls`, error bila kategori hilang), grid total diganti `sm:grid-cols-3` karena 3 kolom tidak muat di 390 px, detail SVG diperjelas.
    - [x] Tinjauan desain oleh subagent (25 Okt): `CHANGES_REQUESTED`, 1 temuan MEDIUM, 8 NIT. Temuan MEDIUM: batang pemasukan dan pengeluaran di grafik hanya dibedakan warna (hijau vs merah), padahal NFR-4 melarang warna sebagai satu-satunya pembeda. Usulan perbaikan: arsiran pada batang pengeluaran dan keterangan posisi kiri/kanan di legenda. Zona waktu, transfer, `wallet_balances`, grant, `withRls`, nama route, dan rencana tes dinyatakan sudah benar. Rinciannya ada di `design-review.md`.
-   - [ ] Revisi desain sesuai tinjauan.
+   - [x] Revisi desain sesuai tinjauan (iterasi 3): batang pengeluaran diarsir, legenda menyebut posisi kiri/kanan, urutan kategori ditambah `id` sebagai penentu terakhir, kontrol bulan nonaktif berupa `<span aria-hidden>`, posisi label sumbu dan `className` di `NavLinks` diperjelas.
+   - [x] Tinjauan ulang desain iterasi 3 (25 Okt): `APPROVED`, 0 HIGH/MEDIUM, 2 NIT (format tanggal di `<title>` tiap batang belum ditentukan; `gap-4` membuat header mobile sekitar 48 px lebih tinggi, usul `gap-x-4 gap-y-1`). Boleh ditutup saat implementasi.
    - [ ] Implementasi + tes (unit, komponen, `tests/db/summary.test.ts`), cek tampilan 390 px, PR `Closes #30`.
 2. [ ] #31 Batas anggaran per kategori.
 3. [ ] #34 Unduh data ke CSV.
