@@ -14,6 +14,7 @@ test("HomeScreen merender Lihat transaksi sebagai tautan tanpa peringatan native
   try {
     render(<HomeScreen displayName="Adi" wallets={[]} categories={[]} today="2026-09-23" />);
     expect(screen.getByRole("link", { name: "Lihat transaksi" }).getAttribute("href")).toBe("/transaksi");
+    expect(screen.getByRole("link", { name: "Lihat ringkasan" }).getAttribute("href")).toBe("/ringkasan");
     expect(error.mock.calls.some((args) => args.some((a) => String(a).includes("nativeButton")))).toBe(false);
   } finally {
     error.mockRestore();

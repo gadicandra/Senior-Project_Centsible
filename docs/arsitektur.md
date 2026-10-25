@@ -339,9 +339,10 @@ src/
 │   ├── page.tsx                      # → <HomeHero> / dashboard
 │   ├── (auth)/login, register, reset-password/page.tsx
 │   ├── (app)/
-│   │   ├── page.tsx                  # Dashboard (FR 12)
+│   │   ├── page.tsx                  # Beranda: saldo + input transaksi (FR 2–4, 7, 10)
+│   │   ├── ringkasan/page.tsx        # Ringkasan (FR 12)
 │   │   ├── transaksi/page.tsx        # Daftar + filter (FR 8)
-│   │   ├── laporan/page.tsx          # Tren + anggaran (FR 11, 12)
+│   │   ├── laporan/page.tsx          # Anggaran (FR 11)
 │   │   └── pengaturan/page.tsx       # Kategori, dompet, akun (FR 1, 9, 10)
 │   ├── api/                          # Route Handler → memanggil src/server/services
 │   │   ├── health/route.ts
@@ -806,7 +807,7 @@ Dua cara pengukuran yang saling melengkapi:
 | FR 9 | Kategori bawaan + kelola | Trigger/seed saat user baru dibuat, `pengaturan/` | Supabase Postgres |
 | FR 10 | Multi-dompet, saldo dihitung | View `wallet_balances` (`security_invoker`): `initial_balance + Σ transaksi` | Supabase Postgres |
 | FR 11 | Anggaran per kategori | `laporan/`, tabel `budgets` | Supabase Postgres |
-| FR 12 | Dashboard ringkasan | Server Component + query agregat | Supabase Postgres |
+| FR 12 | Dashboard ringkasan | `ringkasan/`, `services/summary.ts` (agregat via `withRls`) | Supabase Postgres |
 | FR 13 | Ringkasan mingguan AI | `job-weekly-insight`, tabel `insights` | **Container Apps Job** + Azure OpenAI chat |
 | FR 14 | Deteksi anomali | `job-anomaly-scan` (median + MAD) | **Container Apps Job** |
 | FR 15 | Ekspor CSV | `/api/export/csv` (stream) | — |

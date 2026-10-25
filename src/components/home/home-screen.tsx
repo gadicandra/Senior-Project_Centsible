@@ -6,7 +6,7 @@ import { formatRupiah } from "@/lib/money";
 
 type WalletBalance = WalletOption & { balance: number };
 
-/** Beranda sementara: total & saldo per dompet. Dashboard lengkap dikerjakan di Issue #30. */
+/** Beranda: total & saldo per dompet + input transaksi. Ringkasan bulanan ada di /ringkasan (Issue #30). */
 export function HomeScreen({
   displayName,
   wallets,
@@ -38,9 +38,14 @@ export function HomeScreen({
         ))}
       </ul>
       {/* Tautan bergaya tombol: Base UI Button hanya untuk tombol sungguhan (peran "button"). */}
-      <Link href="/transaksi" className={buttonVariants({ className: "self-start" })}>
-        Lihat transaksi
-      </Link>
+      <div className="flex flex-wrap gap-2">
+        <Link href="/transaksi" className={buttonVariants()}>
+          Lihat transaksi
+        </Link>
+        <Link href="/ringkasan" className={buttonVariants({ variant: "outline" })}>
+          Lihat ringkasan
+        </Link>
+      </div>
       <AiCapture
         categories={categories}
         wallets={wallets.map(({ id, name, isDefault, isArchived }) => ({ id, name, isDefault, isArchived }))}
