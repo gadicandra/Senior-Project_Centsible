@@ -4,7 +4,7 @@ title: Catatan Lanjutan Sesi
 
 # Task — Catatan Lanjutan Sesi (Setelah PR #46, Menuju Fitur 5.3)
 
-Terakhir diperbarui: 25 Oktober 2026 (#30: halaman `/ringkasan` selesai diimplementasi dan dites di branch `feat/30-ringkasan`, commit `7699fc0`; cek tampilan 390 px dan cek silang SQL lulus, ada temuan garis tepi tombol bulan; tinggal hapus akun uji dan PR). Sebelumnya, 23 Oktober 2026: PR #46 di-merge, Production dan Preview lulus smoke test dengan AI mati, region diperbaiki ke `hnd1`, log P2028 tidak menunjukkan error server.
+Terakhir diperbarui: 25 Oktober 2026 (#30: halaman `/ringkasan` selesai diimplementasi dan dites di branch `feat/30-ringkasan`, commit `7699fc0`; cek tampilan 390 px dan cek silang SQL lulus, ada temuan garis tepi tombol bulan; `docs/progres.md` dan Laporan 7 sudah memuat #30 dan pengecekan deploy; tinggal hapus akun uji dan PR). Sebelumnya, 23 Oktober 2026: PR #46 di-merge, Production dan Preview lulus smoke test dengan AI mati, region diperbaiki ke `hnd1`, log P2028 tidak menunjukkan error server.
 
 File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: posisi repo dan deploy, apa yang sudah selesai, apa yang masih terbuka, dan urutan fitur berikutnya.
 
@@ -25,7 +25,7 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: posisi repo 
 | Supabase dev | project ref `cvwkkdzvxivpavqiabsg`. Sempat di-pause, dipulihkan 22 Okt. Migrasi terakhir: `20261023120000_revoke_extra_grants` |
 | Perubahan lokal pengguna | `.gitignore` diubah pengguna dan belum di-commit. Jangan di-stage, di-stash, atau dibuang |
 | Catatan kerja agent | `.agents/tasks/centsible-ai-text-path/`, `.agents/tasks/centsible-db-grants/`, `.agents/tasks/centsible-post-merge/`, `.agents/tasks/centsible-30-ringkasan/` (tidak di-commit) |
-| Laporan | `../Laporan 5 …`, `../Laporan 6 …`, `../Laporan 7 - Tugas Kelompok - MDG Centsible.docx` (+ .pdf, 13 halaman, periode 23–29 Okt) |
+| Laporan | `../Laporan 5 …`, `../Laporan 6 …`, `../Laporan 7 - Tugas Kelompok - MDG Centsible.docx` (+ .pdf, 18 halaman, periode 23–29 Okt; ditambah bagian deploy setelah merge dan #30 pada 25 Okt, cadangan `.BACKUP-2026-10-25`) |
 
 ---
 
@@ -33,7 +33,7 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: posisi repo 
 
 Branch `chore/post-merge-deploy` hanya berisi perubahan dokumen: `docs/task.md`, `docs/progres.md`, dan perbaikan region di `docs/arsitektur.md`. Tidak ada perubahan kode.
 
-Branch `feat/30-ringkasan` (di atas `chore/post-merge-deploy`) menambah halaman `/ringkasan` beserta tesnya, nav "Ringkasan", tautan di Beranda, dan pembaruan `docs/arsitektur.md` (commit `7699fc0`).
+Branch `feat/30-ringkasan` (di atas `chore/post-merge-deploy`) menambah halaman `/ringkasan` beserta tesnya, nav "Ringkasan", tautan di Beranda, dan pembaruan `docs/arsitektur.md` (commit `7699fc0`), ditambah catatan #30 di `docs/progres.md`.
 
 ### Di luar repo (tidak di-commit)
 
@@ -41,7 +41,7 @@ Branch `feat/30-ringkasan` (di atas `chore/post-merge-deploy`) menambah halaman 
 - `.kiro/steering/task-checklist.md`: aturan agar checklist file ini selalu diperbarui.
 - Vercel (23 Okt): env `AI_DRAFT_SECRET` (nilai berbeda per lingkungan, sensitive) dan `AI_PARSE_DAILY_LIMIT=100` di Preview dan Production; env Supabase/database project dev di Preview; *automation bypass secret* Deployment Protection dibuat otomatis oleh `vercel curl`. Region tidak diubah.
 - GitHub: issue #10 ditutup dengan komentar (23 Okt).
-- Laporan 5, 6, dan 7 (docx + pdf) di folder `Senpro/`, beserta cadangan `.BACKUP-2026-10-23*`.
+- Laporan 5, 6, dan 7 (docx + pdf) di folder `Senpro/`, beserta cadangan `.BACKUP-2026-10-23*` dan `Laporan 7 … .BACKUP-2026-10-25.*`.
 
 ---
 
@@ -124,6 +124,8 @@ Tanpa kunci AI:
    - [x] Cek tampilan 390 px (25 Okt): `pnpm dev` + Playwright (Chrome headless, 390×844, `Asia/Jakarta`), 2 akun uji sementara di Supabase dev (satu berisi 11 transaksi Sep–Okt + dompet arsip, satu kosong). 6 screenshot di `.agents/tasks/centsible-30-ringkasan/evidence/`, ringkasan di `visual-verify.md`. Cek silang SQL read-only: total saldo, pemasukan/pengeluaran/selisih Oktober, 5 kategori (persen total 100), September, dan akun kosong semuanya cocok. Tidak ada scroll horizontal (`scrollWidth` 390), tidak ada error console.
      - Temuan: tombol bulan yang aktif tidak bergaris tepi, sedangkan placeholder nonaktif bergaris. Dugaan penyebab: `buttonVariants` dipakai tanpa `cn(...)` pada `Link`, jadi `border-transparent` menang atas `border-border`. Hal yang sama ada di tautan "Lihat ringkasan" di Beranda. Belum diperbaiki.
      - [ ] Hapus 2 akun uji sementara (id tercatat di `visual-verify.md`).
+   - [x] Dokumen (25 Okt): `docs/progres.md` memuat #30 di "Sedang dikerjakan" (issue belum ditutup, jadi belum dicentang). `docs/arsitektur.md` sudah diperbarui di commit `7699fc0`; `docs/database.md` dan `docs/index.md` tidak diubah karena tidak ada view, fungsi, atau migrasi baru.
+   - [x] Laporan 7 (25 Okt, masih periode 23–29 Okt): cadangan `.BACKUP-2026-10-25.docx/.pdf` dibuat dulu. Rangkuman paragraf 2 dan status bagian 1 dan 3 diperbarui (PR #46 sudah di-merge). Bagian baru 4 (merge PR #46, smoke test Production dengan AI mati, env Preview, region `hnd1`, penyebab P2028) dengan Gambar 13, dan bagian baru 5 (#30) dengan Gambar 14–16 dari screenshot asli. Tabel pembagian kontribusi tidak diubah. PDF dibuat ulang, 18 halaman, semua halaman yang berubah dicek lewat `pdftoppm`. Catatan: `.agents/tasks/centsible-30-ringkasan/report-note.md`.
    - [ ] PR `Closes #30` + cek Vercel Preview.
 2. [ ] #31 Batas anggaran per kategori.
 3. [ ] #34 Unduh data ke CSV.
