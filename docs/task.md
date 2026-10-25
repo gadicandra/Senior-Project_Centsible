@@ -4,7 +4,7 @@ title: Catatan Lanjutan Sesi
 
 # Task — Catatan Lanjutan Sesi (Setelah PR #46, Menuju Fitur 5.3)
 
-Terakhir diperbarui: 23 Oktober 2026 (PR #46 sudah di-merge, Production dan Preview lulus smoke test dengan AI mati, dokumen region diperbaiki ke `hnd1`, log Supabase untuk P2028 terbaca dan tidak menunjukkan error di sisi server, checklist dirapikan untuk fitur berikutnya).
+Terakhir diperbarui: 25 Oktober 2026 (mulai #30: branch `feat/30-ringkasan` dibuat, desain halaman ringkasan selesai ditulis, implementasi belum dimulai). Sebelumnya, 23 Oktober 2026: PR #46 di-merge, Production dan Preview lulus smoke test dengan AI mati, region diperbaiki ke `hnd1`, log P2028 tidak menunjukkan error server.
 
 File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: posisi repo dan deploy, apa yang sudah selesai, apa yang masih terbuka, dan urutan fitur berikutnya.
 
@@ -18,13 +18,13 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: posisi repo 
 |---|---|
 | Repo | `/media/adi/CodingSpace/Kuliah/Senpro/Senior-Project_Centsible` (satu folder saja, tanpa worktree) |
 | `main` | `4d745dc` (merge PR #46; lokal sama dengan `origin/main`) |
-| Branch yang aktif | `chore/post-merge-deploy` (dari `main` `4d745dc`), hanya berisi perubahan dokumen sesi ini |
+| Branch yang aktif | `feat/30-ringkasan`, dibuat dari `chore/post-merge-deploy` @ `76b6299` (PR #47 belum di-merge). Belum ada commit kode. `chore/post-merge-deploy` hanya berisi perubahan dokumen |
 | Pull request | [#46](https://github.com/gadicandra/Senior-Project_Centsible/pull/46) **MERGED** ke `main` (23 Okt), menutup #24, #25, #26, #27. [#47](https://github.com/gadicandra/Senior-Project_Centsible/pull/47) (dokumen pasca-merge, branch `chore/post-merge-deploy`) **OPEN**, menunggu review |
 | AI di Vercel | **Mati di Preview dan Production, sesuai keputusan.** Belum ada `ANTHROPIC_API_KEY`, dan 9router di `localhost` tidak bisa dijangkau Vercel. `AI_TEXT_PROVIDER` tidak di-set, jadi `/api/ai/parse` menjawab 503 `ai_unavailable` dan form manual terbuka otomatis |
 | Vercel | Fungsi di **`hnd1`** (Tokyo), satu region dengan Supabase dev (ap-northeast-1). Production `4d745dc` (`dpl_RmqE67EZy4pYmyNaxDqdF8Djxe62`) dan Preview (`dpl_EWHyi5xasLHLuUKxyhbZTtaSCVAU`) Ready dan lulus smoke test 23 Okt. Keduanya memakai project Supabase dev |
 | Supabase dev | project ref `cvwkkdzvxivpavqiabsg`. Sempat di-pause, dipulihkan 22 Okt. Migrasi terakhir: `20261023120000_revoke_extra_grants` |
 | Perubahan lokal pengguna | `.gitignore` diubah pengguna dan belum di-commit. Jangan di-stage, di-stash, atau dibuang |
-| Catatan kerja agent | `.agents/tasks/centsible-ai-text-path/`, `.agents/tasks/centsible-db-grants/`, `.agents/tasks/centsible-post-merge/` (tidak di-commit) |
+| Catatan kerja agent | `.agents/tasks/centsible-ai-text-path/`, `.agents/tasks/centsible-db-grants/`, `.agents/tasks/centsible-post-merge/`, `.agents/tasks/centsible-30-ringkasan/` (tidak di-commit) |
 | Laporan | `../Laporan 5 …`, `../Laporan 6 …`, `../Laporan 7 - Tugas Kelompok - MDG Centsible.docx` (+ .pdf, 13 halaman, periode 23–29 Okt) |
 
 ---
@@ -111,6 +111,9 @@ Urutan yang disarankan: fitur yang **tidak butuh kunci AI** dulu, karena bisa di
 Tanpa kunci AI:
 
 1. [ ] #30 Halaman ringkasan & perhitungan datanya.
+   - [x] Desain ditulis di `.agents/tasks/centsible-30-ringkasan/design.md` (25 Okt). Keputusan utama: route `/ringkasan` dengan `?month=YYYY-MM` (bulan kalender di zona waktu pengguna, rentang `2020-01` s.d. bulan berjalan). Total saldo dari view `wallet_balances` (dompet aktif saja, sama dengan Beranda). Agregasi lewat Prisma `groupBy` di dalam satu `withRls`. Grafik tren harian pakai SVG biasa tanpa library baru. Tidak ada migrasi dan tidak ada dependensi baru.
+   - [x] Temuan skema: belum ada konsep transfer (`entry_kind` hanya `income|expense`), jadi tidak ada yang perlu dikecualikan. `occurred_at` bertipe `date` lokal pengguna, jadi pengelompokan per hari tidak butuh konversi zona waktu. `category_id` wajib, jadi tidak ada transaksi tanpa kategori.
+   - [ ] Implementasi + tes (unit, komponen, `tests/db/summary.test.ts`), cek tampilan 390 px, PR `Closes #30`.
 2. [ ] #31 Batas anggaran per kategori.
 3. [ ] #34 Unduh data ke CSV.
 4. [ ] #36 PWA + offline.
