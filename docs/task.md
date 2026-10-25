@@ -113,6 +113,7 @@ Tanpa kunci AI:
 1. [ ] #30 Halaman ringkasan & perhitungan datanya.
    - [x] Desain ditulis di `.agents/tasks/centsible-30-ringkasan/design.md` (25 Okt). Keputusan utama: route `/ringkasan` dengan `?month=YYYY-MM` (bulan kalender di zona waktu pengguna, rentang `2020-01` s.d. bulan berjalan). Total saldo dari view `wallet_balances` (dompet aktif saja, sama dengan Beranda). Agregasi lewat Prisma `groupBy` di dalam satu `withRls`. Grafik tren harian pakai SVG biasa tanpa library baru. Tidak ada migrasi dan tidak ada dependensi baru.
    - [x] Temuan skema: belum ada konsep transfer (`entry_kind` hanya `income|expense`), jadi tidak ada yang perlu dikecualikan. `occurred_at` bertipe `date` lokal pengguna, jadi pengelompokan per hari tidak butuh konversi zona waktu. `category_id` wajib, jadi tidak ada transaksi tanpa kategori.
+   - [x] Tinjauan mandiri desain (iterasi 2, 25 Okt): grant `wallet_balances` dicek di migrasi 04/05, kode `getSummary` dibuat final (satu `withRls`, error bila kategori hilang), grid total diganti `sm:grid-cols-3` karena 3 kolom tidak muat di 390 px, detail SVG diperjelas.
    - [ ] Implementasi + tes (unit, komponen, `tests/db/summary.test.ts`), cek tampilan 390 px, PR `Closes #30`.
 2. [ ] #31 Batas anggaran per kategori.
 3. [ ] #34 Unduh data ke CSV.
