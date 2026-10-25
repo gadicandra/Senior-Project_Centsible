@@ -4,7 +4,7 @@ title: Catatan Lanjutan Sesi
 
 # Task — Catatan Lanjutan Sesi (Setelah PR #46, Menuju Fitur 5.3)
 
-Terakhir diperbarui: 25 Oktober 2026 (mulai #30: branch `feat/30-ringkasan` dibuat, desain halaman ringkasan selesai ditulis, implementasi belum dimulai). Sebelumnya, 23 Oktober 2026: PR #46 di-merge, Production dan Preview lulus smoke test dengan AI mati, region diperbaiki ke `hnd1`, log P2028 tidak menunjukkan error server.
+Terakhir diperbarui: 25 Oktober 2026 (#30: halaman `/ringkasan` selesai diimplementasi dan dites di branch `feat/30-ringkasan`, commit `7699fc0`; tinggal cek tampilan 390 px dan PR). Sebelumnya, 23 Oktober 2026: PR #46 di-merge, Production dan Preview lulus smoke test dengan AI mati, region diperbaiki ke `hnd1`, log P2028 tidak menunjukkan error server.
 
 File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: posisi repo dan deploy, apa yang sudah selesai, apa yang masih terbuka, dan urutan fitur berikutnya.
 
@@ -18,7 +18,7 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: posisi repo 
 |---|---|
 | Repo | `/media/adi/CodingSpace/Kuliah/Senpro/Senior-Project_Centsible` (satu folder saja, tanpa worktree) |
 | `main` | `4d745dc` (merge PR #46; lokal sama dengan `origin/main`) |
-| Branch yang aktif | `feat/30-ringkasan`, dibuat dari `chore/post-merge-deploy` @ `76b6299` (PR #47 belum di-merge). Belum ada commit kode. `chore/post-merge-deploy` hanya berisi perubahan dokumen |
+| Branch yang aktif | `feat/30-ringkasan`, dibuat dari `chore/post-merge-deploy` @ `76b6299` (PR #47 belum di-merge). Commit kode #30: `7699fc0` (lint, typecheck, 447 unit test, build, `pnpm test:db` 34/34 lulus). `chore/post-merge-deploy` hanya berisi perubahan dokumen |
 | Pull request | [#46](https://github.com/gadicandra/Senior-Project_Centsible/pull/46) **MERGED** ke `main` (23 Okt), menutup #24, #25, #26, #27. [#47](https://github.com/gadicandra/Senior-Project_Centsible/pull/47) (dokumen pasca-merge, branch `chore/post-merge-deploy`) **OPEN**, menunggu review |
 | AI di Vercel | **Mati di Preview dan Production, sesuai keputusan.** Belum ada `ANTHROPIC_API_KEY`, dan 9router di `localhost` tidak bisa dijangkau Vercel. `AI_TEXT_PROVIDER` tidak di-set, jadi `/api/ai/parse` menjawab 503 `ai_unavailable` dan form manual terbuka otomatis |
 | Vercel | Fungsi di **`hnd1`** (Tokyo), satu region dengan Supabase dev (ap-northeast-1). Production `4d745dc` (`dpl_RmqE67EZy4pYmyNaxDqdF8Djxe62`) dan Preview (`dpl_EWHyi5xasLHLuUKxyhbZTtaSCVAU`) Ready dan lulus smoke test 23 Okt. Keduanya memakai project Supabase dev |
@@ -32,6 +32,8 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: posisi repo 
 ## 2. Yang berbeda dari `main`
 
 Branch `chore/post-merge-deploy` hanya berisi perubahan dokumen: `docs/task.md`, `docs/progres.md`, dan perbaikan region di `docs/arsitektur.md`. Tidak ada perubahan kode.
+
+Branch `feat/30-ringkasan` (di atas `chore/post-merge-deploy`) menambah halaman `/ringkasan` beserta tesnya, nav "Ringkasan", tautan di Beranda, dan pembaruan `docs/arsitektur.md` (commit `7699fc0`).
 
 ### Di luar repo (tidak di-commit)
 
@@ -117,7 +119,10 @@ Tanpa kunci AI:
    - [x] Tinjauan desain oleh subagent (25 Okt): `CHANGES_REQUESTED`, 1 temuan MEDIUM, 8 NIT. Temuan MEDIUM: batang pemasukan dan pengeluaran di grafik hanya dibedakan warna (hijau vs merah), padahal NFR-4 melarang warna sebagai satu-satunya pembeda. Usulan perbaikan: arsiran pada batang pengeluaran dan keterangan posisi kiri/kanan di legenda. Zona waktu, transfer, `wallet_balances`, grant, `withRls`, nama route, dan rencana tes dinyatakan sudah benar. Rinciannya ada di `design-review.md`.
    - [x] Revisi desain sesuai tinjauan (iterasi 3): batang pengeluaran diarsir, legenda menyebut posisi kiri/kanan, urutan kategori ditambah `id` sebagai penentu terakhir, kontrol bulan nonaktif berupa `<span aria-hidden>`, posisi label sumbu dan `className` di `NavLinks` diperjelas.
    - [x] Tinjauan ulang desain iterasi 3 (25 Okt): `APPROVED`, 0 HIGH/MEDIUM, 2 NIT (format tanggal di `<title>` tiap batang belum ditentukan; `gap-4` membuat header mobile sekitar 48 px lebih tinggi, usul `gap-x-4 gap-y-1`). Boleh ditutup saat implementasi.
-   - [ ] Implementasi + tes (unit, komponen, `tests/db/summary.test.ts`), cek tampilan 390 px, PR `Closes #30`.
+   - [x] Implementasi + tes (25 Okt, commit `7699fc0`): `src/lib/summary.ts` (bulan, zero-fill harian, persen largest-remainder), `services/summary.ts` (satu `withRls`), route `/ringkasan` + `loading.tsx`, komponen `src/components/ringkasan/`, nav "Ringkasan", tautan "Lihat ringkasan" di Beranda, `docs/arsitektur.md` §4 + baris FR 12. Tes baru: 28 unit `summary`, 3 service (mock), 19 komponen, 2 nav, `tests/db/summary.test.ts` 5/5. Total `pnpm test` 447 lulus, `pnpm test:db` 34/34, lint/typecheck/build lulus. Tanpa migrasi dan dependensi baru.
+     - Catatan: `@testing-library/jest-dom` tidak terpasang, jadi cek deskripsi aksesibel grafik membaca `aria-describedby` → `<figcaption>`. Dua NIT tinjauan terakhir ditutup (format `<title>` batang "12 Okt: …", header `gap-x-4 gap-y-1`).
+   - [ ] Cek tampilan 390 px (screenshot ke `evidence/`).
+   - [ ] PR `Closes #30` + cek Vercel Preview.
 2. [ ] #31 Batas anggaran per kategori.
 3. [ ] #34 Unduh data ke CSV.
 4. [ ] #36 PWA + offline.
