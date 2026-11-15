@@ -383,7 +383,7 @@ Setiap policy RLS memfilter `user_id`, jadi **kolom `user_id` harus selalu jadi 
 | `categories_active_name_per_user_idx` | `UNIQUE (user_id, kind, lower(btrim(name))) WHERE NOT is_archived` | Menjamin `enum` kategori AI tidak ambigu (ADR-06) |
 | `wallets_one_default_per_user_idx` | `UNIQUE (user_id) WHERE is_default` | Tepat satu dompet utama |
 | `wallets_active_name_per_user_idx` | `UNIQUE (user_id, lower(btrim(name))) WHERE NOT is_archived` | Nama dompet tidak ambigu |
-| `budgets_user_active_idx` | `(user_id) WHERE is_active` | Halaman laporan hanya membaca pagu aktif |
+| `budgets_user_active_idx` | `(user_id) WHERE is_active` | Halaman anggaran hanya membaca pagu aktif |
 | `insights_user_generated_idx` / `insights_user_unread_idx` | `(user_id, generated_at ↓)` (+ parsial belum dibaca) | Daftar insight & lencana notifikasi |
 | `ai_extractions_model_mode_idx` | `(model_version, input_mode, created_at ↓)` | Evaluasi akurasi AI per model & per jenis input (§10.2) |
 | `users_email_idx` | `(email)` | Pencarian manual saat dukungan/debug |
@@ -949,7 +949,7 @@ Ditulis di sini supaya tidak ada yang mengira basis data sudah menjaganya:
 |---|---|---|
 | `occurred_at` tidak boleh di masa depan | `CHECK` tidak boleh memanggil `current_date` (tidak *immutable*) | Skema Zod bersama form manual & keluaran AI |
 | Nominal wajar ≤ Rp 100 juta (tanda ⚠) | Ambang produk, bukan aturan integritas — bisa berubah tanpa migrasi | Normalisasi §6.3 |
-| Anggaran hanya untuk kategori `expense` | Butuh kolom `kind` yang digandakan di `budgets`; harganya lebih mahal daripada manfaatnya | Server Action anggaran |
+| Anggaran hanya untuk kategori `expense` | Butuh kolom `kind` yang digandakan di `budgets`; harganya lebih mahal daripada manfaatnya | Server Action anggaran (`createBudget` di `src/server/services/budgets.ts`) |
 | Transaksi baru tidak memakai dompet/kategori yang sudah diarsipkan | Transaksi lama harus tetap sah, jadi tidak bisa jadi `CHECK` | Daftar pilihan di UI + validasi Server Action |
 | Panjang input teks AI: UI 300 / API 500 / DB 1000 karakter | Batas produk di UI (`maxLength` 300); Route Handler menolak > 500 karakter setelah normalisasi; basis data hanya memasang pagar longgar 1000 karakter | Input bar (UI) + Route Handler `/api/ai/parse` (Zod) |
 

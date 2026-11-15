@@ -2,8 +2,10 @@ import Link from "next/link";
 import { AiCapture } from "@/components/ai-input/ai-capture";
 import type { CategoryOption, WalletOption } from "@/components/transaksi/types";
 import { buttonVariants } from "@/components/ui/button";
+import type { BudgetOverview } from "@/lib/budget";
 import { formatRupiah } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import { BudgetGlance } from "./budget-glance";
 
 type WalletBalance = WalletOption & { balance: number };
 
@@ -13,11 +15,13 @@ export function HomeScreen({
   wallets,
   categories,
   today,
+  budgets,
 }: {
   displayName: string;
   wallets: WalletBalance[];
   categories: CategoryOption[];
   today: string;
+  budgets: BudgetOverview | null;
 }) {
   const total = wallets.reduce((sum, w) => sum + w.balance, 0);
   return (
@@ -38,6 +42,7 @@ export function HomeScreen({
           </li>
         ))}
       </ul>
+      <BudgetGlance overview={budgets} />
       {/* Tautan bergaya tombol: Base UI Button hanya untuk tombol sungguhan (peran "button"). */}
       <div className="flex flex-wrap gap-2">
         <Link href="/transaksi" className={buttonVariants()}>
