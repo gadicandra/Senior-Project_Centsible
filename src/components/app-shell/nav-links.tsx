@@ -6,14 +6,15 @@ import { cn } from "@/lib/utils";
 
 const LINKS = [
   { href: "/", label: "Beranda" },
+  { href: "/ringkasan", label: "Ringkasan" },
   { href: "/transaksi", label: "Transaksi" },
   { href: "/pengaturan", label: "Pengaturan" },
 ];
 
-export function NavLinks() {
+export function NavLinks({ className }: { className?: string }) {
   const pathname = usePathname();
   return (
-    <nav className="flex items-center gap-1 text-sm">
+    <nav className={cn("flex items-center gap-1 overflow-x-auto whitespace-nowrap text-sm", className)}>
       {LINKS.map(({ href, label }) => {
         const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
         return (

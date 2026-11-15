@@ -47,16 +47,16 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 
 ### F. Fitur AI Agent
 
-- [ ] Menyusun perintah untuk AI & format hasilnya — #24 (di PR ini, menunggu review)
-- [ ] Membuat layanan pembaca transaksi — #25 (di PR ini, menunggu review)
-- [ ] Membuat kartu konfirmasi yang bisa langsung dibetulkan — #26 (di PR ini, menunggu review)
-- [ ] Menyimpan catatan koreksi dari pengguna — #27 (di PR ini, menunggu review)
+- [x] Menyusun perintah untuk AI & format hasilnya — #24 (PR #46 merged)
+- [x] Membuat layanan pembaca transaksi — #25 (PR #46 merged)
+- [x] Membuat kartu konfirmasi yang bisa langsung dibetulkan — #26 (PR #46 merged)
+- [x] Menyimpan catatan koreksi dari pengguna — #27 (PR #46 merged)
 - [ ] Membuat fitur input suara (rekam → ubah jadi teks) — #28
 - [ ] Menyiapkan data uji & mengukur akurasi AI — #29
 
 ### G. Analitik & Insight
 
-- [ ] Membuat halaman ringkasan & perhitungan datanya — #30
+- [ ] Membuat halaman ringkasan & perhitungan datanya — #30 (selesai di branch `feat/30-ringkasan`, PR belum dibuat)
 - [ ] Membuat fitur batas anggaran per kategori — #31
 - [ ] Membuat ringkasan mingguan dari AI — #32
 - [ ] Membuat deteksi pengeluaran tidak wajar & peringatannya — #33
@@ -76,40 +76,42 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 - Desain antarmuka: palet warna, wireframe, purwarupa, dan komponen dasar (#12–#15).
 - Fondasi proyek: repositori Next.js, papan GitHub Project, CI, Supabase, dan rilis ke Vercel (#16–#20).
 - Fitur inti pencatatan: daftar & masuk, transaksi dengan form manual, serta pengaturan kategori & dompet (#21–#23).
+- Fitur AI teks: perintah & format hasil AI, layanan pembaca transaksi `/api/ai/parse`, kartu konfirmasi, dan catatan koreksi di `ai_extractions` (#24–#27, PR #46 merged 23 Okt). Production dan Preview di Vercel sudah dicek jalan (23 Okt), dengan AI sengaja dimatikan karena belum ada kunci API; pengguna langsung dialihkan ke form manual.
 
 ## Sedang dikerjakan / menunggu review
 
-Semua tugas di bawah ada di PR ini (branch `feat/25-ai-text-parser`). Kodenya sudah jadi, tapi belum di-merge.
+- #30 Halaman ringkasan bulanan `/ringkasan` (branch `feat/30-ringkasan`, 25 Okt). Isinya total saldo dompet aktif, pemasukan, pengeluaran, selisih, pengeluaran per kategori (persentase selalu berjumlah 100%), dan grafik tren harian. Bulan bisa dipilih lewat `?month=YYYY-MM`. Semua angka dihitung di server dalam satu `withRls`, tanpa migrasi dan tanpa library baru. Desain dan kode sudah direview (APPROVED). `pnpm test` 447 lulus, `pnpm test:db` 34/34 lulus, lint, typecheck, dan build berhasil. Tampilan 390 px dicek dan angkanya dicocokkan dengan query SQL ke database dev.
+  - Sisa sebelum PR: tombol bulan yang aktif belum bergaris tepi (gaya tombol pada tautan belum lewat `cn(...)`), lalu hapus 2 akun uji sementara dan buka PR `Closes #30`.
 
-- #24 Menyusun perintah untuk AI & format hasilnya. AI paham istilah uang sehari-hari seperti gocap dan ceban.
-- #25 Membuat layanan pembaca transaksi. Endpoint `/api/ai/parse` memeriksa login, ukuran input, dan kuota. Kalau AI gagal, pengguna dialihkan ke form manual.
-- #26 Membuat kartu konfirmasi. Hasil baca AI bisa dibetulkan langsung. Tidak ada data tersimpan sebelum pengguna menekan Simpan.
-- #27 Menyimpan catatan koreksi. Transaksi dan catatan di `ai_extractions` disimpan bersamaan dalam satu transaksi database.
+Pekerjaan berikutnya dimulai dari daftar di bawah, satu branch dari `main` dan satu PR per issue.
 
 ## Belum dikerjakan / direncanakan
 
-Urutan di bawah adalah urutan yang direncanakan.
+Urutan di bawah adalah urutan yang direncanakan. Fitur yang tidak butuh kunci AI dikerjakan dulu, karena bisa dites dan dirilis sekarang.
 
-1. #28 Membuat fitur input suara (rekam → ubah jadi teks).
-2. #29 Menyiapkan data uji & mengukur akurasi AI. Targetnya minimal 85% untuk nominal dan kategori.
-3. Subproyek G (Analitik & Insight):
-   - #30 Halaman ringkasan & perhitungan datanya.
+1. Tanpa kunci AI:
    - #31 Batas anggaran per kategori.
+   - #34 Unduh data ke CSV.
+   - #36 Membuat aplikasi jadi PWA & bisa dipakai offline.
+   - #35 Menulis tes otomatis.
+2. Butuh kunci AI (`ANTHROPIC_API_KEY`) atau Azure OpenAI:
+   - #28 Membuat fitur input suara (rekam → ubah jadi teks).
+   - #29 Menyiapkan data uji & mengukur akurasi AI. Targetnya minimal 85% untuk nominal dan kategori.
    - #32 Ringkasan mingguan dari AI.
    - #33 Deteksi pengeluaran tidak wajar & peringatannya.
-   - #34 Unduh data ke CSV.
-4. Subproyek H (Pengujian, Rilis & Dokumentasi):
-   - #35 Menulis tes otomatis.
-   - #36 Membuat aplikasi jadi PWA & bisa dipakai offline.
-   - #37 Uji coba ke pengguna asli.
+3. Penutup:
+   - #37 Uji coba ke pengguna asli (setelah pindah ke Azure, Fase 2).
    - #38 Menyusun dokumentasi & bahan presentasi.
 
-## Hal yang perlu dicek sebelum merge
+## Hal yang masih perlu dicek
 
 - [x] `pnpm test:db` ke Supabase dev lulus semua (29 dari 29). Sebelumnya 1 tes gagal karena database dev memberi hak lebih dari yang ada di migrasi, di semua tabel (sisa pengaturan bawaan Supabase lama). Hak itu sudah dicabut lewat migrasi baru `20261023120000_revoke_extra_grants`, dan tabel baru tidak lagi otomatis mendapat hak tersebut. Production di Vercel memakai project Supabase yang sama dengan dev, jadi migrasi ini sudah berlaku di sana (dicek 23 Okt).
-- [ ] Putuskan bersama tim soal error Prisma P2028 (transaksi database gagal dimulai tepat waktu). Hasil pengecekan: error hanya muncul sesaat setelah database dev dipulihkan dan tidak muncul lagi di 3 kali tes berikutnya. Rekomendasinya belum perlu mengubah kode.
+- [ ] Putuskan bersama tim soal error Prisma P2028 (transaksi database gagal dimulai tepat waktu). Hasil pengecekan: error hanya muncul sesaat setelah database dev dipulihkan dan tidak muncul lagi di tes-tes berikutnya. Log database dan pooler Supabase pada jam kejadian sudah dibaca (23 Okt): database baru saja dipulihkan dan sempat menyala ulang 3 kali, setelah itu tidak ada error, timeout, atau antrean koneksi di sisi server. Jadi error ini terjadi karena aplikasi menunggu terlalu lama saat database baru bangun. Rekomendasinya belum perlu mengubah kode.
 - [x] Uji langsung ke LLM dengan model non-thinking (`claude-haiku-4-5` lewat 9router lokal, 23 Okt). "makan siang gocap tadi pagi", "bensin ceban kemarin", dan "kopi 25rb" terbaca benar (50.000, 10.000, 25.000; tanggal sesuai Asia/Jakarta), ketiganya tersimpan dari kartu konfirmasi bersama baris `ai_extractions`. Kalimat yang bukan transaksi dialihkan ke form manual. Log server tidak memuat teks mentah pengguna. Ini hanya untuk dev lokal; Vercel tetap butuh kunci API penyedia AI.
-- [ ] Isi variabel lingkungan AI di Vercel (Preview dan Production). Sebagian sudah: `AI_DRAFT_SECRET` dan `AI_PARSE_DAILY_LIMIT=100` (23 Okt). `AI_TEXT_PROVIDER`, `AI_TEXT_MODEL`, dan kunci API sengaja belum diisi karena belum ada `ANTHROPIC_API_KEY`, jadi AI di Vercel tetap mati dan form manual tetap jalan.
-- [x] Buat `AI_DRAFT_SECRET` dengan `openssl rand -hex 32`, lalu simpan di Vercel (nilai berbeda untuk Preview dan Production, 23 Okt). Nilainya tidak disimpan di repositori.
+- [ ] Isi kunci AI di Vercel (Preview dan Production). `AI_DRAFT_SECRET` dan `AI_PARSE_DAILY_LIMIT=100` sudah ada (23 Okt). `AI_TEXT_PROVIDER`, `AI_TEXT_MODEL`, dan kunci API sengaja belum diisi karena belum ada `ANTHROPIC_API_KEY`, jadi AI di Vercel tetap mati dan form manual tetap jalan.
 - [x] Peringatan dev Base UI di beranda diperbaiki: "Lihat transaksi" sekarang tautan dengan gaya tombol (23 Okt).
-- [ ] Putuskan bersama tim: Preview di Vercel belum punya env Supabase/database sama sekali, jadi deploy preview belum bisa dipakai login.
+- [x] Preview di Vercel diisi env Supabase/database project dev, dan login di deploy Preview sudah dicoba berhasil (23 Okt).
+- [x] Production setelah merge PR #46 dicek: login, form manual, dan penyimpanan ke database jalan; AI menjawab "tidak tersedia" lalu membuka form manual; log tidak memuat data pengguna (23 Okt).
+- [x] Region: fungsi Vercel di `hnd1` (Tokyo), satu region dengan database Supabase dev (Tokyo). Tetap di `hnd1`; dokumen arsitektur sudah diperbaiki.
+- [ ] Di ponsel, halaman daftar transaksi dan dialog "Catat transaksi" tampak lebih lebar dari layar. Perlu dicek di ponsel asli.
+- [ ] Pembagian kontribusi di Laporan 5–7 masih perkiraan, dicek pengguna nanti.

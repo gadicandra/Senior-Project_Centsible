@@ -3,10 +3,11 @@ import { AiCapture } from "@/components/ai-input/ai-capture";
 import type { CategoryOption, WalletOption } from "@/components/transaksi/types";
 import { buttonVariants } from "@/components/ui/button";
 import { formatRupiah } from "@/lib/money";
+import { cn } from "@/lib/utils";
 
 type WalletBalance = WalletOption & { balance: number };
 
-/** Beranda sementara: total & saldo per dompet. Dashboard lengkap dikerjakan di Issue #30. */
+/** Beranda: total & saldo per dompet + input transaksi. Ringkasan bulanan ada di /ringkasan (Issue #30). */
 export function HomeScreen({
   displayName,
   wallets,
@@ -38,9 +39,14 @@ export function HomeScreen({
         ))}
       </ul>
       {/* Tautan bergaya tombol: Base UI Button hanya untuk tombol sungguhan (peran "button"). */}
-      <Link href="/transaksi" className={buttonVariants({ className: "self-start" })}>
-        Lihat transaksi
-      </Link>
+      <div className="flex flex-wrap gap-2">
+        <Link href="/transaksi" className={buttonVariants()}>
+          Lihat transaksi
+        </Link>
+        <Link href="/ringkasan" className={cn(buttonVariants({ variant: "outline" }))}>
+          Lihat ringkasan
+        </Link>
+      </div>
       <AiCapture
         categories={categories}
         wallets={wallets.map(({ id, name, isDefault, isArchived }) => ({ id, name, isDefault, isArchived }))}

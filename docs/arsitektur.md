@@ -84,7 +84,7 @@ Migrasi ke Azure = ganti env var + buat resource, **bukan** menulis ulang fitur.
 3. **Vercel tidak bisa menjangkau `localhost`.** Whisper lokal (`localhost:8000`) dan 9router (default `localhost:20128/v1`) hanya bisa dipakai dari `pnpm dev` di laptop yang sama. Untuk **Preview Deployment** di Vercel pilih salah satu:
    - jalankan 9router / Whisper di VPS atau lewat *tunnel* (mis. Cloudflare Tunnel) **dengan API key** — jangan membuka endpoint tanpa autentikasi ke internet; atau
    - matikan fitur suara di preview dengan `AI_STT_ENABLED=false` (tombol mikrofon disembunyikan, input teks tetap jalan — sesuai prinsip fallback FR 7).
-4. **Region Vercel Functions** diset dekat Supabase (Singapura, `sin1`) di pengaturan project, supaya tiap query tidak bolak-balik ke region default di AS.
+4. **Region Vercel Functions** berada di **`hnd1` (Tokyo)**, sama dengan region Supabase dev (**ap-northeast-1**, Tokyo). Region diatur di pengaturan project Vercel (`vercel.json` tidak memuat `regions`). **Tetap di `hnd1`** selama database di Tokyo: `withRls()` butuh beberapa perjalanan bolak-balik ke database per request (BEGIN, `set_config`, query, COMMIT), dan dalam satu region tiap perjalanan hanya beberapa ms. Kalau fungsi dipindah ke `sin1` sementara database tetap di Tokyo, tiap perjalanan bertambah sekitar 70–80 ms. Kalau nanti ingin semuanya dekat Indonesia, pindahkan project Supabase ke ap-southeast-1 dulu, baru fungsi ke `sin1`.
 5. **Batas Vercel Functions:** body request/response maksimal **4,5 MB** — aman untuk rekaman 30 detik (§6.2). Durasi maksimum fungsi & frekuensi Cron tergantung paket Vercel; cek sebelum menjadwalkan FR 13–14.
 6. **Privasi & ketentuan layanan.** Di Fase 1 kalimat transaksi dikirim ke penyedia di luar Azure (Anthropic, atau penyedia mana pun yang dipilih 9router). Gunakan **data uji / data tim**, bukan data responden. Pastikan akun upstream yang disambungkan ke 9router memang mengizinkan pemakaian lewat API untuk aplikasi — 9router adalah gateway pribadi tanpa SLA, sehingga **tidak dipakai untuk uji coba pengguna (Subproyek H)**.
 7. **Whisper lokal ≠ Azure Whisper persis.** Ukuran model (`small`, `medium`, `large-v3`) dan runtime (faster-whisper/CTranslate2) memengaruhi akurasi. `language: "id"` dan `prompt` kamus slang tetap dikirim, tetapi angka akurasi Fase 1 **harus diukur ulang** setelah pindah ke Azure.
@@ -273,6 +273,8 @@ flowchart TB
 | Container Apps + Supabase | **Southeast Asia (Singapore)** + Supabase **ap-southeast-1 (Singapore)** | Aplikasi ↔ DB adalah jalur paling "cerewet" (banyak query per halaman). Menaruh keduanya di kota yang sama membuat latensi query di bawah beberapa ms. Pengguna di Indonesia ke Singapore juga dekat |
 | Azure OpenAI | Region yang **menyediakan Whisper dan model chat pilihan sekaligus** | Whisper tidak tersedia di semua region. Panggilan AI hanya ±1–2 kali per transaksi dan sudah berdurasi ratusan ms–detik, jadi tambahan latensi lintas region relatif kecil. **Sebelum membuat resource, cek tabel *Model availability by region* di Microsoft Learn** — jangan asumsikan |
 
+> **Catatan region saat ini (Fase 1).** Project Supabase dev yang sekarang dipakai ada di **ap-northeast-1 (Tokyo)**, dan Vercel Functions berjalan di `hnd1` (Tokyo), jadi keduanya sudah satu region (§0.2 butir 4). Tabel di atas adalah rencana Fase 2. Kalau Fase 2 tetap memakai project Supabase yang sekarang, Container Apps sebaiknya di **Japan East** supaya tetap satu region dengan database. Region Singapore baru tepat kalau project Supabase dipindah ke ap-southeast-1.
+
 > **Kenapa bukan Azure Database for PostgreSQL?** Bisa, tapi kita akan kehilangan Supabase Auth + RLS yang terintegrasi dengan JWT, lalu harus membangun sendiri FR 1 dan FR 17. Supabase tetap dipakai sebagai layanan data; Azure dipakai untuk komputasi dan AI.
 
 ---
@@ -337,9 +339,10 @@ src/
 │   ├── page.tsx                      # → <HomeHero> / dashboard
 │   ├── (auth)/login, register, reset-password/page.tsx
 │   ├── (app)/
-│   │   ├── page.tsx                  # Dashboard (FR 12)
+│   │   ├── page.tsx                  # Beranda: saldo + input transaksi (FR 2–4, 7, 10)
+│   │   ├── ringkasan/page.tsx        # Ringkasan (FR 12)
 │   │   ├── transaksi/page.tsx        # Daftar + filter (FR 8)
-│   │   ├── laporan/page.tsx          # Tren + anggaran (FR 11, 12)
+│   │   ├── laporan/page.tsx          # Anggaran (FR 11)
 │   │   └── pengaturan/page.tsx       # Kategori, dompet, akun (FR 1, 9, 10)
 │   ├── api/                          # Route Handler → memanggil src/server/services
 │   │   ├── health/route.ts
@@ -804,7 +807,7 @@ Dua cara pengukuran yang saling melengkapi:
 | FR 9 | Kategori bawaan + kelola | Trigger/seed saat user baru dibuat, `pengaturan/` | Supabase Postgres |
 | FR 10 | Multi-dompet, saldo dihitung | View `wallet_balances` (`security_invoker`): `initial_balance + Σ transaksi` | Supabase Postgres |
 | FR 11 | Anggaran per kategori | `laporan/`, tabel `budgets` | Supabase Postgres |
-| FR 12 | Dashboard ringkasan | Server Component + query agregat | Supabase Postgres |
+| FR 12 | Dashboard ringkasan | `ringkasan/`, `services/summary.ts` (agregat via `withRls`) | Supabase Postgres |
 | FR 13 | Ringkasan mingguan AI | `job-weekly-insight`, tabel `insights` | **Container Apps Job** + Azure OpenAI chat |
 | FR 14 | Deteksi anomali | `job-anomaly-scan` (median + MAD) | **Container Apps Job** |
 | FR 15 | Ekspor CSV | `/api/export/csv` (stream) | — |

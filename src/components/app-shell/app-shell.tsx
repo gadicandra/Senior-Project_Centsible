@@ -7,11 +7,12 @@ export function AppShell({ displayName, children }: { displayName: string; child
   return (
     <div className="flex min-h-full flex-1 flex-col">
       <header className="sticky top-0 z-10 border-b bg-background/90 backdrop-blur">
-        <div className="mx-auto flex h-14 w-full max-w-5xl items-center gap-4 px-4">
+        <div className="mx-auto flex min-h-14 w-full max-w-5xl flex-wrap items-center gap-x-4 gap-y-1 px-4 py-2 sm:h-14 sm:py-0">
           <Link href="/" className="font-semibold text-primary">
             Centsible
           </Link>
-          <NavLinks />
+          {/* Di bawah sm nav turun ke baris kedua agar header tidak meluap di 390 px. */}
+          <NavLinks className="order-last w-full sm:order-none sm:w-auto" />
           <div className="ml-auto flex items-center gap-2">
             <Link href="/akun" className="hidden text-sm text-muted-foreground hover:underline sm:inline">
               {displayName}
