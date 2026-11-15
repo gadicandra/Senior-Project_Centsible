@@ -95,8 +95,19 @@ async function assertActiveRefs(tx: RlsTx, input: TransactionInput, keep?: { wal
   return { wallet, category };
 }
 
-export async function createTransaction(claims: JwtClaims, input: TransactionInput) {
-  await withRls(claims, async (tx) => {
+/**
+ * `clientId` (sinkron offline, FR 16) membuat panggilan idempoten: bila baris dengan kunci itu
+ * sudah ada, tidak ada yang ditulis dan hasilnya `false`.
+ */
+export async function createTransaction(claims: JwtClaims, input: TransactionInput, clientId?: string): Promise<boolean> {
+  return withRls(claims, async (tx) => {
+    if (clientId) {
+      const existing = await tx.transaction.findUnique({
+        where: { userId_clientId: { userId: claims.sub, clientId } },
+        select: { id: true },
+      });
+      if (existing) return false;
+    }
     await assertActiveRefs(tx, input);
     await tx.transaction.create({
       data: {
@@ -108,8 +119,10 @@ export async function createTransaction(claims: JwtClaims, input: TransactionInp
         description: input.description,
         occurredAt: dateOnlyToDate(input.occurredAt),
         source: "manual",
+        clientId,
       },
     });
+    return true;
   });
 }
 
