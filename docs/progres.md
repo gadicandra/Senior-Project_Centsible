@@ -56,8 +56,8 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 
 ### G. Analitik & Insight
 
-- [ ] Membuat halaman ringkasan & perhitungan datanya — #30 (selesai di branch `feat/30-ringkasan`, PR belum dibuat)
-- [ ] Membuat fitur batas anggaran per kategori — #31
+- [x] Membuat halaman ringkasan & perhitungan datanya — #30 (PR #48 merged)
+- [ ] Membuat fitur batas anggaran per kategori — #31 (kode selesai, di-push oleh anggota tim)
 - [ ] Membuat ringkasan mingguan dari AI — #32
 - [ ] Membuat deteksi pengeluaran tidak wajar & peringatannya — #33
 - [ ] Membuat fitur unduh data ke CSV — #34
@@ -76,12 +76,13 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 - Desain antarmuka: palet warna, wireframe, purwarupa, dan komponen dasar (#12–#15).
 - Fondasi proyek: repositori Next.js, papan GitHub Project, CI, Supabase, dan rilis ke Vercel (#16–#20).
 - Fitur inti pencatatan: daftar & masuk, transaksi dengan form manual, serta pengaturan kategori & dompet (#21–#23).
+- Halaman ringkasan bulanan `/ringkasan` (#30, PR #48 merged). Dokumen pasca-merge PR #46 (PR #47 merged). Smoke test Production 15 Nov: login, catat transaksi, dan `/ringkasan` jalan, angka cocok dengan database.
 - Fitur AI teks: perintah & format hasil AI, layanan pembaca transaksi `/api/ai/parse`, kartu konfirmasi, dan catatan koreksi di `ai_extractions` (#24–#27, PR #46 merged 23 Okt). Production dan Preview di Vercel sudah dicek jalan (23 Okt), dengan AI sengaja dimatikan karena belum ada kunci API; pengguna langsung dialihkan ke form manual.
 
 ## Sedang dikerjakan / menunggu review
 
-- #30 Halaman ringkasan bulanan `/ringkasan` (branch `feat/30-ringkasan`, 25 Okt). Isinya total saldo dompet aktif, pemasukan, pengeluaran, selisih, pengeluaran per kategori (persentase selalu berjumlah 100%), dan grafik tren harian. Bulan bisa dipilih lewat `?month=YYYY-MM`. Semua angka dihitung di server dalam satu `withRls`, tanpa migrasi dan tanpa library baru. Desain dan kode sudah direview (APPROVED). `pnpm test` 447 lulus, `pnpm test:db` 34/34 lulus, lint, typecheck, dan build berhasil. Tampilan 390 px dicek dan angkanya dicocokkan dengan query SQL ke database dev.
-  - Sisa sebelum PR: tombol bulan yang aktif belum bergaris tepi (gaya tombol pada tautan belum lewat `cn(...)`), lalu hapus 2 akun uji sementara dan buka PR `Closes #30`.
+- #31 Batas anggaran per kategori `/anggaran`. Kode dan tes selesai (15 Nov: `pnpm test` 514, `pnpm test:db` 43/43, lint, typecheck, build lulus), tanpa migrasi. Commit, push, dan PR dikerjakan oleh anggota tim lain.
+- PR #49: perbaikan Beranda di ponsel. Email panjang sebagai nama sapaan membuat halaman melebar sampai sekitar 490 px dan tombol kirim AI keluar layar.
 
 Pekerjaan berikutnya dimulai dari daftar di bawah, satu branch dari `main` dan satu PR per issue.
 
@@ -90,7 +91,6 @@ Pekerjaan berikutnya dimulai dari daftar di bawah, satu branch dari `main` dan s
 Urutan di bawah adalah urutan yang direncanakan. Fitur yang tidak butuh kunci AI dikerjakan dulu, karena bisa dites dan dirilis sekarang.
 
 1. Tanpa kunci AI:
-   - #31 Batas anggaran per kategori.
    - #34 Unduh data ke CSV.
    - #36 Membuat aplikasi jadi PWA & bisa dipakai offline.
    - #35 Menulis tes otomatis.
@@ -115,3 +115,5 @@ Urutan di bawah adalah urutan yang direncanakan. Fitur yang tidak butuh kunci AI
 - [x] Region: fungsi Vercel di `hnd1` (Tokyo), satu region dengan database Supabase dev (Tokyo). Tetap di `hnd1`; dokumen arsitektur sudah diperbaiki.
 - [ ] Di ponsel, halaman daftar transaksi dan dialog "Catat transaksi" tampak lebih lebar dari layar. Perlu dicek di ponsel asli.
 - [ ] Pembagian kontribusi di Laporan 5–7 masih perkiraan, dicek pengguna nanti.
+- [x] Tampilan ponsel (15 Nov, Production, 390×844): `/transaksi`, dialog "Catat transaksi", dan `/ringkasan` tidak melebar. Beranda melebar karena email panjang di sapaan; diperbaiki di PR #49.
+- [ ] Redirect URL Auth Supabase untuk Preview (daftar, reset password, Google) belum dicek.
