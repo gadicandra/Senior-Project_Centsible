@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { Button } from "@/components/ui/button";
-import { signOut } from "@/server/actions/auth";
 import { NavLinks } from "./nav-links";
+import { SignOutButton } from "./sign-out-button";
 
 export function AppShell({ displayName, children }: { displayName: string; children: React.ReactNode }) {
   return (
@@ -17,11 +16,7 @@ export function AppShell({ displayName, children }: { displayName: string; child
             <Link href="/akun" className="hidden text-sm text-muted-foreground hover:underline sm:inline">
               {displayName}
             </Link>
-            <form action={signOut}>
-              <Button type="submit" variant="ghost" size="sm">
-                Keluar
-              </Button>
-            </form>
+            <SignOutButton />
           </div>
         </div>
       </header>
