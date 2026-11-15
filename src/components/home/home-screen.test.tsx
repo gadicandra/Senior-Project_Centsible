@@ -79,3 +79,35 @@ describe("kartu Anggaran di Beranda", () => {
     expect(screen.getByRole("link", { name: "Lihat semua anggaran (5)" }).getAttribute("href")).toBe("/anggaran");
   });
 });
+
+describe("peringatan pengeluaran tidak biasa (FR 14)", () => {
+  const base = { categoryId: "c1", name: "Makan", icon: null, from: "2026-10-12", to: "2026-10-15" };
+
+  test("teks nominal & frekuensi, tautan ke transaksi minggu ini", () => {
+    render(
+      <HomeScreen
+        displayName="Adi"
+        wallets={[]}
+        categories={[]}
+        today="2026-10-15"
+        budgets={null}
+        anomalies={[
+          { ...base, kind: "amount", current: 400_000, median: 100_000, ratio: 4 },
+          { ...base, categoryId: "c2", name: "Jajan", kind: "count", current: 12, median: 4, ratio: 3 },
+        ]}
+      />,
+    );
+    expect(screen.getByRole("heading", { name: "Pengeluaran tidak biasa" })).toBeDefined();
+    const items = screen.getAllByRole("listitem").map((li) => li.textContent?.replace(/ /g, " "));
+    expect(items).toContain("Pengeluaran Makan minggu ini Rp 400.000, biasanya sekitar Rp 100.000 (4× biasanya). Lihat");
+    expect(items).toContain("12 transaksi Jajan minggu ini, biasanya sekitar 4 (3× biasanya). Lihat");
+    expect(screen.getAllByRole("link", { name: "Lihat" })[0].getAttribute("href")).toBe(
+      "/transaksi?type=expense&categoryId=c1&from=2026-10-12&to=2026-10-15",
+    );
+  });
+
+  test("tanpa anomali: kartu tidak tampil", () => {
+    render(<HomeScreen displayName="Adi" wallets={[]} categories={[]} today="2026-10-15" budgets={null} anomalies={[]} />);
+    expect(screen.queryByRole("heading", { name: "Pengeluaran tidak biasa" })).toBeNull();
+  });
+});

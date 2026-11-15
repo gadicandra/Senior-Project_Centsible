@@ -5,6 +5,8 @@ import { buttonVariants } from "@/components/ui/button";
 import type { BudgetOverview } from "@/lib/budget";
 import { formatRupiah } from "@/lib/money";
 import { cn } from "@/lib/utils";
+import type { AnomalyView } from "@/lib/anomaly";
+import { AnomalyAlert } from "./anomaly-alert";
 import { BudgetGlance } from "./budget-glance";
 
 type WalletBalance = WalletOption & { balance: number };
@@ -16,12 +18,14 @@ export function HomeScreen({
   categories,
   today,
   budgets,
+  anomalies = [],
 }: {
   displayName: string;
   wallets: WalletBalance[];
   categories: CategoryOption[];
   today: string;
   budgets: BudgetOverview | null;
+  anomalies?: AnomalyView[];
 }) {
   const total = wallets.reduce((sum, w) => sum + w.balance, 0);
   return (
@@ -31,6 +35,7 @@ export function HomeScreen({
         <p className="text-muted-foreground">Total saldo semua dompet</p>
         <p className="text-3xl font-semibold tabular-nums">{formatRupiah(total)}</p>
       </div>
+      <AnomalyAlert anomalies={anomalies} />
       <ul className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {wallets.map((w) => (
           <li key={w.id} className="rounded-lg border p-4">

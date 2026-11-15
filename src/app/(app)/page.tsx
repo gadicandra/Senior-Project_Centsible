@@ -1,6 +1,7 @@
 import { HomeScreen } from "@/components/home/home-screen";
 import { todayIn } from "@/lib/dates";
 import { requireClaims } from "@/server/auth/session";
+import { getAnomalies } from "@/server/services/anomalies";
 import { getBudgetOverview } from "@/server/services/budgets";
 import { listCategories } from "@/server/services/categories";
 import { getProfile } from "@/server/services/profile";
@@ -8,7 +9,7 @@ import { listWallets } from "@/server/services/wallets";
 
 export default async function Page() {
   const claims = await requireClaims();
-  const [profile, wallets, categories, budgets] = await Promise.all([
+  const [profile, wallets, categories, budgets, anomalies] = await Promise.all([
     getProfile(claims),
     listWallets(claims),
     listCategories(claims),
@@ -16,6 +17,11 @@ export default async function Page() {
     getBudgetOverview(claims).catch((error: unknown) => {
       console.error("budget_overview_failed", error);
       return null;
+    }),
+    // Peringatan bersifat tambahan: gagal dihitung = tidak ditampilkan.
+    getAnomalies(claims).catch((error: unknown) => {
+      console.error("anomalies_failed", error);
+      return [];
     }),
   ]);
   return (
@@ -25,6 +31,7 @@ export default async function Page() {
       categories={categories}
       today={todayIn(profile?.timezone ?? "Asia/Jakarta")}
       budgets={budgets}
+      anomalies={anomalies}
     />
   );
 }
