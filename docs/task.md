@@ -18,7 +18,7 @@ File ini adalah catatan serah-terima untuk sesi berikutnya. Isinya: posisi repo 
 |---|---|
 | Repo | `/media/adi/CodingSpace/Kuliah/Senpro/Senior-Project_Centsible` (satu folder saja, tanpa worktree) |
 | `main` | `743f4df` (merge PR #50, #31 anggaran). Sebelumnya `8ec1f21` (PR #48) dan PR #47 |
-| Branch yang aktif | Satu branch per issue dari `main`. Terbuka: `fix/beranda-overflow` (PR #49), `feat/36-pwa` (PR #51). #34 CSV dan #33 anomali dikerjakan sebagai patch untuk anggota tim (tidak ada branch di repo sampai mereka push) |
+| Branch yang aktif | Satu branch per issue dari `main`. Terbuka: `fix/beranda-overflow` (PR #49), `feat/36-pwa` (PR #51). #34 CSV, #33 anomali, dan #35 tes dikerjakan sebagai patch dan di-push oleh Syauqi (`feat/34-csv`, `feat/33-anomali`, `feat/35-tes`). PR #52/#53 versi pertama atas nama pengguna ditutup tanpa merge (16 Nov) supaya pembagian commit rata |
 | Pull request | #46, #47, #48, #50 **MERGED**. [#49](https://github.com/gadicandra/Senior-Project_Centsible/pull/49) (perbaikan Beranda 390 px) dan [#51](https://github.com/gadicandra/Senior-Project_Centsible/pull/51) (`Closes #36`) **OPEN**, menunggu review |
 | AI di Vercel | **Mati di Preview dan Production, sesuai keputusan.** Belum ada `ANTHROPIC_API_KEY`, dan 9router di `localhost` tidak bisa dijangkau Vercel. `AI_TEXT_PROVIDER` tidak di-set, jadi `/api/ai/parse` menjawab 503 `ai_unavailable` dan form manual terbuka otomatis |
 | Vercel | Fungsi di **`hnd1`** (Tokyo), satu region dengan Supabase dev (ap-northeast-1). Production `4d745dc` (`dpl_RmqE67EZy4pYmyNaxDqdF8Djxe62`) dan Preview (`dpl_EWHyi5xasLHLuUKxyhbZTtaSCVAU`) Ready dan lulus smoke test 23 Okt. Keduanya memakai project Supabase dev |
@@ -110,7 +110,7 @@ Branch `feat/30-ringkasan` (di atas `chore/post-merge-deploy`) menambah halaman 
 
 Urutan yang disarankan: fitur yang **tidak butuh kunci AI** dulu, karena bisa dikerjakan, dites, dan dideploy sekarang. Fitur AI menyusul setelah ada `ANTHROPIC_API_KEY` atau Azure OpenAI (Fase 2). Satu branch dari `main` dan satu PR per issue.
 
-**Urutan kerja berikutnya (15 Nov):** review dan merge PR #49 dan #51; anggota tim push #34 CSV dan #33 anomali dari patch. Lalu #35 tes. Fitur AI (#28, #29, #32) menunggu `ANTHROPIC_API_KEY` atau Azure. **Pembagian kontributor:** #31, #34, #33 dikerjakan lewat patch dan di-commit anggota tim; #30, #36, perbaikan, dan deploy oleh pengguna.
+**Urutan kerja berikutnya (16 Nov):** pengguna merge PR #49 dan #51. Syauqi push dan merge berurutan #34 CSV → #33 anomali → #35 tes (#35 terakhir karena memasang batas cakupan di CI); Naufal mereview tiap PR di Preview. Fitur AI (#28, #29, #32, teks AI #33) menunggu `ANTHROPIC_API_KEY` atau Azure. **Pembagian:** pengguna dan Syauqi yang push; Naufal pemeriksa. Periode Laporan 8: Syauqi 22 commit fitur (#31, #34, #33, #35), pengguna #49, #51, dokumen, deploy, laporan.
 
 Tanpa kunci AI:
 
@@ -145,18 +145,19 @@ Tanpa kunci AI:
    - [x] Tinjauan ulang desain iterasi 4 (26 Okt, `design-review.md` ditimpa): **APPROVED**, 0 HIGH, 0 MEDIUM, 2 NIT. Keempat temuan iterasi 3 terbukti sudah ditangani: `BUDGET_NOT_FOUND` aman diimpor klien dan `Toaster` ada di `root-shell.tsx` (di luar `BudgetItem`), jadi toast tetap tampil setelah kartu hilang; kode `23514` sampai ke `pgCode` lewat `originalCode` adapter pg (jalur yang sama dengan `42501` di tes AI); Transport adalah kategori pengeluaran bawaan; matriks grant sesuai migrasi 05. NIT: kepala desain menyebut commit `1d0369e` yang sudah usang; tes komponen belum menulis cara membuka menu aksi Base UI (`fireEvent.click` tombol lalu `findByRole("menuitem")`). Boleh ditutup saat implementasi.
    - [x] Implementasi + tes (3 Nov): sesuai desain iterasi 4. `pnpm test` 514, `pnpm test:db` 43/43 (9 tes baru), lint, typecheck, build lulus. Tanpa migrasi dan dependensi baru. Diserahkan sebagai `anggaran-31.patch` + `PANDUAN-COMMIT.md`.
    - [ ] Cek tampilan nav lima label di 390 px setelah deploy.
-3. [ ] #34 Unduh data ke CSV (**diserahkan ke anggota tim**, belum di-push).
+3. [ ] #34 Unduh data ke CSV (**di-push Syauqi** dari patch, PR 1 dari 3).
    - [x] Kode + tes (15 Nov): `GET /api/export` (sesi wajib, filter sama dengan `/transaksi`, semua halaman, maks. 10.000 baris), helper CSV RFC 4180 dengan BOM UTF-8 dan penangkal rumus spreadsheet, tombol "Unduh CSV" di `/transaksi`. 455 unit test, `tests/db/export.test.ts` 2/2, build lulus; unduhan dicek di browser. Patch + panduan: `.agents/tasks/centsible-34-csv/` (salinan di `~/kirim-34/`).
 4. [ ] #36 PWA + offline (PR [#51](https://github.com/gadicandra/Senior-Project_Centsible/pull/51), menunggu review).
    - [x] Manifest + ikon, Service Worker tanpa library (halaman network-first + salinan offline, aset cache-first, `/api` tidak di-cache, cache halaman dibuang saat Keluar), antrean form manual offline (localStorage per pengguna) + `POST /api/sync` idempoten lewat `client_id` (tanpa migrasi). E2E offline di build lokal lulus (catat offline → antrean → online → 1 baris, kirim ulang tidak dobel). Di luar cakupan: teks AI offline dan Background Sync (butuh IndexedDB).
-5. [ ] #35 Tes otomatis (cakupan), sambil jalan di tiap PR dan dirapikan di akhir.
+5. [ ] #35 Tes otomatis + cakupan di CI (**di-push Syauqi** dari patch, PR 3 dari 3).
+   - [x] Kode + tes (15–16 Nov): `@vitest/coverage-v8` (dev), `pnpm test:coverage` di CI dengan batas baris/statement 75%, cabang 68%, fungsi 65% (angka sekarang dibulatkan ke bawah; dibuktikan gagal saat tes dihapus). Tes baru: `actions/auth`, `actions/settings`, `services/categories`, `transaction-filters`. Bug ditemukan: email ber-spasi ditolak (validasi sebelum trim), diperbaiki. Cakupan baris 68,5% → 77,5%, cabang 65,5% → 71,7%; gabungan dengan #33/#34/#36 tetap di atas batas (76,2% / 70,0%, 561 tes). Patch + panduan: `.agents/tasks/centsible-35-tes/`, paket `~/kirim-teman.zip`.
 
 Butuh kunci AI atau Azure:
 
 6. [ ] #28 Input suara (rekam → teks → kartu konfirmasi yang sama). Whisper lokal tidak terjangkau dari Vercel → `AI_STT_ENABLED=false` di Preview/Production, atau endpoint ber-API key.
 7. [ ] #29 Dataset uji + ukur akurasi AI (target ≥ 85% nominal & kategori), pakai data `ai_extractions`. Bisa disiapkan datasetnya dulu, diukur lewat 9router lokal; angka akhir diukur ulang di penyedia final.
 8. [ ] #32 Ringkasan mingguan dari AI (Vercel Cron + `CRON_SECRET`).
-9. [ ] #33 Deteksi pengeluaran tidak wajar & peringatannya. Bagian statistik (median + MAD, tanpa AI) dikerjakan sebagai patch untuk anggota tim; teks penjelasan AI menyusul.
+9. [ ] #33 Deteksi pengeluaran tidak wajar & peringatannya. Bagian statistik (median + MAD 8 minggu, nominal dan frekuensi, tanpa AI) **di-push Syauqi** dari patch (PR 2 dari 3, "Bagian dari #33"); teks penjelasan AI menyusul.
 
 Sebelum uji pengguna:
 

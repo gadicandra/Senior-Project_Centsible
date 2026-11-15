@@ -59,12 +59,12 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 - [x] Membuat halaman ringkasan & perhitungan datanya — #30 (PR #48)
 - [x] Membuat fitur batas anggaran per kategori — #31 (PR #50)
 - [ ] Membuat ringkasan mingguan dari AI — #32
-- [ ] Membuat deteksi pengeluaran tidak wajar & peringatannya — #33
-- [ ] Membuat fitur unduh data ke CSV — #34 (kode selesai, menunggu di-push anggota tim)
+- [ ] Membuat deteksi pengeluaran tidak wajar & peringatannya — #33 (bagian statistik selesai, di-push Syauqi; teks AI menyusul)
+- [ ] Membuat fitur unduh data ke CSV — #34 (kode selesai, di-push Syauqi)
 
 ### H. Pengujian, Rilis & Dokumentasi
 
-- [ ] Menulis tes otomatis — #35
+- [ ] Menulis tes otomatis — #35 (kode selesai, di-push Syauqi)
 - [ ] Membuat aplikasi jadi PWA & bisa dipakai offline — #36 (PR #51)
 - [ ] Uji coba ke pengguna asli — #37
 - [ ] Menyusun dokumentasi & bahan presentasi — #38
@@ -83,8 +83,7 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 
 - PR #51 (#36): aplikasi bisa dipasang di HP, halaman yang pernah dibuka tetap tampil saat offline, dan transaksi dari form manual bisa dicatat tanpa internet lalu terkirim otomatis saat online (tidak dobel walau terkirim dua kali). Tanpa migrasi.
 - PR #49: perbaikan Beranda di ponsel (email panjang di sapaan membuat halaman melebar).
-- #34 Unduh CSV: kode dan tes selesai, di-push oleh anggota tim.
-- #33 Deteksi pengeluaran tidak wajar: bagian statistik sedang dikerjakan, di-push oleh anggota tim.
+- #34 Unduh CSV, #33 deteksi pengeluaran tidak wajar (bagian statistik), dan #35 tes otomatis dengan batas cakupan di CI: kode dan tes selesai, di-push Syauqi berurutan (#34 → #33 → #35). Naufal memeriksa tiap PR di Preview.
 
 Pekerjaan berikutnya dimulai dari daftar di bawah, satu branch dari `main` dan satu PR per issue.
 
@@ -93,7 +92,6 @@ Pekerjaan berikutnya dimulai dari daftar di bawah, satu branch dari `main` dan s
 Urutan di bawah adalah urutan yang direncanakan. Fitur yang tidak butuh kunci AI dikerjakan dulu, karena bisa dites dan dirilis sekarang.
 
 1. Tanpa kunci AI:
-   - #35 Menulis tes otomatis.
 2. Butuh kunci AI (`ANTHROPIC_API_KEY`) atau Azure OpenAI:
    - #28 Membuat fitur input suara (rekam → ubah jadi teks).
    - #29 Menyiapkan data uji & mengukur akurasi AI. Targetnya minimal 85% untuk nominal dan kategori.
