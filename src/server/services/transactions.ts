@@ -78,6 +78,39 @@ export async function listTransactions(claims: JwtClaims, filter: TransactionFil
   };
 }
 
+// ponytail: batas 10.000 baris per unduhan (dimuat sekaligus ke memori fungsi Vercel).
+// Naikkan ke stream per halaman bila ada pengguna yang melewatinya.
+export const EXPORT_MAX_ROWS = 10_000;
+
+export type ExportRow = { occurredAt: string; type: "income" | "expense"; amount: number; category: string; wallet: string; description: string };
+
+/** Semua transaksi yang cocok dengan filter (tanpa halaman), terlama dulu, untuk CSV (FR 15). */
+export async function exportTransactions(claims: JwtClaims, filter: TransactionFilter): Promise<ExportRow[]> {
+  const rows = await withRls(claims, (tx) =>
+    tx.transaction.findMany({
+      where: whereFrom(filter),
+      orderBy: [{ occurredAt: "asc" }, { createdAt: "asc" }],
+      take: EXPORT_MAX_ROWS,
+      select: {
+        occurredAt: true,
+        type: true,
+        amount: true,
+        description: true,
+        category: { select: { name: true } },
+        wallet: { select: { name: true } },
+      },
+    }),
+  );
+  return rows.map((t) => ({
+    occurredAt: dateToDateOnly(t.occurredAt),
+    type: t.type,
+    amount: Number(t.amount),
+    category: t.category.name,
+    wallet: t.wallet.name,
+    description: t.description,
+  }));
+}
+
 /** Dompet & kategori nonaktif tidak boleh dipakai transaksi baru/ubahan (database.md §17.1). */
 async function assertActiveRefs(tx: RlsTx, input: TransactionInput, keep?: { walletId: string; categoryId: string }) {
   const [wallet, category] = await Promise.all([
