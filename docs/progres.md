@@ -51,14 +51,14 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 - [x] Membuat layanan pembaca transaksi — #25 (PR #46 merged)
 - [x] Membuat kartu konfirmasi yang bisa langsung dibetulkan — #26 (PR #46 merged)
 - [x] Menyimpan catatan koreksi dari pengguna — #27 (PR #46 merged)
-- [ ] Membuat fitur input suara (rekam → ubah jadi teks) — #28
-- [ ] Menyiapkan data uji & mengukur akurasi AI — #29
+- [ ] Membuat fitur input suara (rekam → ubah jadi teks) — #28 (PR #57)
+- [ ] Menyiapkan data uji & mengukur akurasi AI — #29 (PR #54, akurasi 88,9%)
 
 ### G. Analitik & Insight
 
 - [x] Membuat halaman ringkasan & perhitungan datanya — #30 (PR #48)
 - [x] Membuat fitur batas anggaran per kategori — #31 (PR #50)
-- [ ] Membuat ringkasan mingguan dari AI — #32
+- [ ] Membuat ringkasan mingguan dari AI — #32 (kode selesai, PR setelah #33)
 - [ ] Membuat deteksi pengeluaran tidak wajar & peringatannya — #33 (bagian statistik selesai, di-push Syauqi; teks AI menyusul)
 - [ ] Membuat fitur unduh data ke CSV — #34 (kode selesai, di-push Syauqi)
 
@@ -66,8 +66,8 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 
 - [ ] Menulis tes otomatis — #35 (kode selesai, di-push Syauqi)
 - [ ] Membuat aplikasi jadi PWA & bisa dipakai offline — #36 (PR #51)
-- [ ] Uji coba ke pengguna asli — #37
-- [ ] Menyusun dokumentasi & bahan presentasi — #38
+- [ ] Uji coba ke pengguna asli — #37 (protokol & alat ukur di PR #56; pelaksanaan setelah Fase 2)
+- [ ] Menyusun dokumentasi & bahan presentasi — #38 (PR #55)
 
 ## Sudah selesai
 
@@ -81,25 +81,16 @@ Status dicek dari daftar issue dan PR di repositori `gadicandra/Senior-Project_C
 
 ## Sedang dikerjakan / menunggu review
 
-- PR #51 (#36): aplikasi bisa dipasang di HP, halaman yang pernah dibuka tetap tampil saat offline, dan transaksi dari form manual bisa dicatat tanpa internet lalu terkirim otomatis saat online (tidak dobel walau terkirim dua kali). Tanpa migrasi.
-- PR #49: perbaikan Beranda di ponsel (email panjang di sapaan membuat halaman melebar).
-- #34 Unduh CSV, #33 deteksi pengeluaran tidak wajar (bagian statistik), dan #35 tes otomatis dengan batas cakupan di CI: kode dan tes selesai, di-push Syauqi berurutan (#34 → #33 → #35). Naufal memeriksa tiap PR di Preview.
+- PR #49 (perbaikan Beranda di ponsel), #51 (#36 PWA + offline), #54 (#29 dataset + akurasi AI **88,9%**), #57 (#28 input suara), #56 (#37 protokol uji coba), #55 (#38 panduan + slide). CI hijau, menunggu digabung.
+- #34 Unduh CSV, #33 peringatan pengeluaran tidak wajar, #35 tes + cakupan di CI: di-push Syauqi; Naufal memeriksa di Preview.
+- #32 Ringkasan mingguan dari AI (Vercel Cron Senin 06:00 WIB): kode dan tes selesai, PR dibuka setelah #33 masuk karena berbagi kartu Beranda.
 
 Pekerjaan berikutnya dimulai dari daftar di bawah, satu branch dari `main` dan satu PR per issue.
 
 ## Belum dikerjakan / direncanakan
 
-Urutan di bawah adalah urutan yang direncanakan. Fitur yang tidak butuh kunci AI dikerjakan dulu, karena bisa dites dan dirilis sekarang.
-
-1. Tanpa kunci AI:
-2. Butuh kunci AI (`ANTHROPIC_API_KEY`) atau Azure OpenAI:
-   - #28 Membuat fitur input suara (rekam → ubah jadi teks).
-   - #29 Menyiapkan data uji & mengukur akurasi AI. Targetnya minimal 85% untuk nominal dan kategori.
-   - #32 Ringkasan mingguan dari AI.
-   - #33 Deteksi pengeluaran tidak wajar & peringatannya.
-3. Penutup:
-   - #37 Uji coba ke pengguna asli (setelah pindah ke Azure, Fase 2).
-   - #38 Menyusun dokumentasi & bahan presentasi.
+1. Pindah ke Fase 2 (Azure OpenAI + Whisper) supaya AI dan input suara bisa dinyalakan di Production.
+2. #37 Uji coba 14 hari dengan ≥ 10 mahasiswa, mengikuti [protokol uji coba](uji-coba.md).
 
 ## Hal yang masih perlu dicek
 
