@@ -1,24 +1,23 @@
 // @vitest-environment node
 import { beforeEach, expect, test, vi } from "vitest";
 import { summarizeWeek } from "@/server/ai/weekly";
-import { prisma } from "@/server/db/client";
+import { asService } from "@/server/db/as-service";
 import { withRls, type RlsTx } from "@/server/db/with-rls";
 import { dedupeKey, generateWeeklySummaries, getLatestWeekly, lastWeek } from "./weekly";
 
 vi.mock("@/server/ai/weekly", () => ({ summarizeWeek: vi.fn(async () => null) }));
 vi.mock("@/server/db/with-rls", () => ({ withRls: vi.fn() }));
-vi.mock("@/server/db/client", () => ({
-  prisma: {
-    user: { findMany: vi.fn() },
-    insight: { findUnique: vi.fn(), create: vi.fn() },
-    transaction: { groupBy: vi.fn() },
-    category: { findMany: vi.fn() },
-  },
+// Semua akses job lewat asService (role service_role); klien palsu dibagi ke tiap transaksi.
+const db = vi.hoisted(() => ({
+  user: { findMany: vi.fn() },
+  insight: { findUnique: vi.fn(), create: vi.fn() },
+  transaction: { groupBy: vi.fn() },
+  category: { findMany: vi.fn() },
 }));
+vi.mock("@/server/db/as-service", () => ({ asService: vi.fn((fn: (tx: unknown) => unknown) => fn(db)) }));
 
 const NOW = new Date("2026-11-16T00:00:00Z"); // Senin 07:00 WIB
 const day = (d: string) => new Date(`${d}T00:00:00Z`);
-const db = vi.mocked(prisma, { deep: true });
 
 beforeEach(() => {
   vi.clearAllMocks();
@@ -40,8 +39,10 @@ test("lastWeek & dedupeKey", () => {
   expect(dedupeKey("2026-11-09")).toBe("weekly_summary:2026-11-09");
 });
 
-test("statistik per pengguna difilter user_id; templat dipakai saat AI mati", async () => {
+test("statistik per pengguna difilter user_id; templat dipakai saat AI mati; semua lewat asService", async () => {
   expect(await generateWeeklySummaries(NOW)).toEqual({ users: 1, created: 1, skipped: 0, ai: 0, failed: 0 });
+  // daftar pengguna, cek dedupe, statistik, simpan = 4 transaksi service_role
+  expect(asService).toHaveBeenCalledTimes(4);
   expect(db.transaction.groupBy.mock.calls[0][0]).toMatchObject({
     where: { userId: "u1", occurredAt: { gte: day("2026-10-12"), lte: day("2026-11-15") } },
   });
