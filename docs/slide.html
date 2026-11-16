@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Centsible · Presentasi Akhir</title>
+<style>
+  :root { --bg: #fafaf9; --fg: #171717; --muted: #57534e; --accent: #047857; --card: #fff; --line: #e7e5e4; }
+  @media (prefers-color-scheme: dark) { :root { --bg: #0c0a09; --fg: #fafaf9; --muted: #a8a29e; --accent: #34d399; --card: #1c1917; --line: #292524; } }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--fg); font: 18px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; }
+  main { height: 100%; overflow-y: auto; scroll-snap-type: y mandatory; }
+  section { min-height: 100%; scroll-snap-align: start; display: flex; flex-direction: column; justify-content: center; padding: 6vh max(16px, 8vw); border-bottom: 1px solid var(--line); }
+  h1 { font-size: clamp(2.2rem, 6vw, 4rem); margin: 0 0 .5rem; letter-spacing: -.02em; }
+  h2 { font-size: clamp(1.6rem, 4vw, 2.6rem); margin: 0 0 1.2rem; letter-spacing: -.01em; }
+  .kicker { color: var(--accent); font-weight: 600; text-transform: uppercase; letter-spacing: .08em; font-size: .85rem; margin-bottom: .5rem; }
+  p, li { color: var(--muted); max-width: 60ch; }
+  strong { color: var(--fg); }
+  ul { padding-left: 1.2rem; margin: 0; }
+  li + li { margin-top: .4rem; }
+  .grid { display: grid; gap: 1rem; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); max-width: 1100px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 1rem 1.2rem; }
+  .card b { display: block; color: var(--fg); margin-bottom: .25rem; }
+  .big { font-size: clamp(2.2rem, 5vw, 3.4rem); font-weight: 700; color: var(--accent); line-height: 1.1; white-space: nowrap; margin-bottom: .4rem; }
+  .flow { display: flex; flex-wrap: wrap; gap: .5rem; align-items: center; font-weight: 600; }
+  .flow span { background: var(--card); border: 1px solid var(--line); border-radius: 999px; padding: .4rem .9rem; }
+  .flow i { color: var(--muted); font-style: normal; }
+  table { border-collapse: collapse; max-width: 900px; width: 100%; }
+  th, td { text-align: left; padding: .5rem .75rem; border-bottom: 1px solid var(--line); }
+  th { color: var(--fg); }
+  td { color: var(--muted); }
+  .hint { position: fixed; right: 16px; bottom: 12px; font-size: .8rem; color: var(--muted); }
+  a { color: var(--accent); }
+</style>
+</head>
+<body>
+<main>
+  <section>
+    <div class="kicker">Senior Project TI · MDG · Gasal 2026</div>
+    <h1>Centsible</h1>
+    <p>Pencatat keuangan mahasiswa yang cukup diajak bicara: <strong>“beli bensin gocap kemarin”</strong> jadi transaksi terstruktur dalam satu ketukan.</p>
+    <p>Garjita Adicandra · Muhammad Syauqi Fittuqo · Naufal Dzaky</p>
+  </section>
+
+  <section>
+    <div class="kicker">Masalah</div>
+    <h2>Mencatat itu sendiri yang bikin berhenti</h2>
+    <ul>
+      <li>Form panjang (nominal, kategori, dompet, tanggal) untuk tiap jajan Rp 5.000.</li>
+      <li>Aplikasi yang ada tidak paham bahasa mahasiswa: <strong>gocap, ceban, 25rb, kemarin lusa</strong>.</li>
+      <li>Fitur penting (multi-dompet, ekspor) dikunci di balik premium.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="kicker">Solusi</div>
+    <h2>Ketik atau ucapkan → AI menyusun → kamu konfirmasi</h2>
+    <div class="flow"><span>Kalimat / suara</span><i>→</i><span>Whisper (suara → teks)</span><i>→</i><span>LLM + skema per pengguna</span><i>→</i><span>Kartu konfirmasi</span><i>→</i><span>Simpan</span></div>
+    <p style="margin-top:1.2rem">AI tidak pernah menyimpan sendiri. Kategori dan dompet dibatasi ke milik pengguna lewat skema, nominal dicek silang dengan pengurai slang deterministik, dan bila AI gagal form manual langsung terbuka.</p>
+  </section>
+
+  <section>
+    <div class="kicker">Fitur</div>
+    <h2>17 kebutuhan fungsional</h2>
+    <div class="grid">
+      <div class="card"><b>Pencatatan</b>Kalimat, suara, form manual, kartu konfirmasi, catatan koreksi AI.</div>
+      <div class="card"><b>Data</b>Multi-dompet, kategori mahasiswa, filter, ekspor CSV.</div>
+      <div class="card"><b>Analitik</b>Ringkasan bulanan, anggaran per kategori, peringatan pengeluaran tidak wajar.</div>
+      <div class="card"><b>AI penasihat</b>Ringkasan mingguan otomatis + satu saran anggaran yang bisa langsung dijalankan.</div>
+      <div class="card"><b>PWA</b>Pasang di HP, tetap bisa mencatat saat offline, sinkron otomatis tanpa dobel.</div>
+      <div class="card"><b>Keamanan</b>Row Level Security di semua tabel; hapus akun menghapus semua data.</div>
+    </div>
+  </section>
+
+  <section>
+    <div class="kicker">Arsitektur</div>
+    <h2>Sederhana di Fase 1, siap pindah ke Azure</h2>
+    <table>
+      <tr><th>Lapisan</th><th>Fase 1 (sekarang)</th><th>Fase 2</th></tr>
+      <tr><td>Aplikasi</td><td>Next.js 16 di Vercel (hnd1)</td><td>Azure Container Apps</td></tr>
+      <tr><td>Data & auth</td><td>Supabase Postgres + RLS, Prisma 7</td><td>sama</td></tr>
+      <tr><td>AI teks</td><td>Claude Haiku (SDK resmi / gateway)</td><td>Azure OpenAI</td></tr>
+      <tr><td>Suara</td><td>Whisper lokal (Speaches)</td><td>Azure Whisper</td></tr>
+      <tr><td>Terjadwal</td><td>Vercel Cron + <code>CRON_SECRET</code></td><td>Container Apps Jobs</td></tr>
+    </table>
+    <p style="margin-top:1rem">Ganti penyedia = ganti env var. Semua panggilan AI lewat satu modul <code>src/server/ai</code>.</p>
+  </section>
+
+  <section>
+    <div class="kicker">Hasil</div>
+    <h2>Akurasi AI di atas target</h2>
+    <div class="grid">
+      <div class="card"><div class="big">88,9%</div><b>Nominal + kategori</b>99 kalimat berlabel, target 85%</div>
+      <div class="card"><div class="big">100%</div><b>Nominal</b>termasuk slang & “2 ceban”</div>
+      <div class="card"><div class="big">1,3 dtk</div><b>p95 latensi</b>per kalimat</div>
+      <div class="card"><div class="big">0%</div><b>Gagal baca</b>tidak ada yang jatuh ke form manual</div>
+    </div>
+    <p style="margin-top:1rem">11 kesalahan semuanya kategori ambigu (laundry → Kos atau Lain-lain?), bukan salah baca nominal.</p>
+  </section>
+
+  <section>
+    <div class="kicker">Kualitas</div>
+    <h2>Diuji di tiap lapisan</h2>
+    <ul>
+      <li><strong>±570 tes unit & komponen</strong>, cakupan baris ≥ 75% dijaga CI (gagal bila turun).</li>
+      <li><strong>Tes integrasi database</strong>: RLS antar pengguna, hak akses <code>anon</code>, constraint, cascade hapus akun.</li>
+      <li><strong>E2E di browser</strong> 390 px: offline → antrean → online → tersimpan sekali.</li>
+      <li>Tes menemukan bug nyata, mis. email dengan spasi di ujung ditolak saat login.</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="kicker">Proses</div>
+    <h2>Satu issue, satu branch, satu PR</h2>
+    <ul>
+      <li>38 issue di GitHub Project, dikerjakan bertahap per subproyek A–H.</li>
+      <li>Setiap PR: CI hijau + Preview Vercel + diperiksa anggota lain sebelum digabung.</li>
+      <li>Desain fitur besar ditinjau dulu (mis. anggaran: 4 putaran tinjauan sampai disetujui).</li>
+    </ul>
+  </section>
+
+  <section>
+    <div class="kicker">Selanjutnya</div>
+    <h2>Uji coba 14 hari dengan pengguna asli</h2>
+    <ul>
+      <li>Pindah ke Azure (AI dengan SLA, Whisper yang terjangkau dari aplikasi).</li>
+      <li>≥ 10 mahasiswa, 14 hari; ukur retensi hari ke-7 dan ke-14 serta akurasi AI dari data koreksi nyata.</li>
+      <li>Setel ulang ambang deteksi anomali dan kategori yang sering tertukar.</li>
+    </ul>
+    <p style="margin-top:1rem">Dokumentasi: <a href="./">Halaman proyek</a> · <a href="panduan.html">Panduan</a> · <a href="arsitektur.html">Arsitektur</a></p>
+  </section>
+</main>
+<div class="hint" aria-hidden="true">Gulir atau ↓ untuk slide berikutnya</div>
+<script>
+  // Panah/PageDown/spasi pindah satu slide; tetap bisa digulir biasa.
+  const slides = [...document.querySelectorAll("section")];
+  const current = () => slides.findIndex((s) => s.getBoundingClientRect().top > -innerHeight / 2);
+  addEventListener("keydown", (e) => {
+    const d = { ArrowDown: 1, PageDown: 1, " ": 1, ArrowRight: 1, ArrowUp: -1, PageUp: -1, ArrowLeft: -1 }[e.key];
+    if (!d) return;
+    e.preventDefault();
+    slides[Math.max(0, Math.min(slides.length - 1, current() + d))]?.scrollIntoView({ behavior: "smooth" });
+  });
+</script>
+</body>
+</html>
