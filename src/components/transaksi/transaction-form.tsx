@@ -77,7 +77,7 @@ export function TransactionForm({
   // Opsi aktif + opsi arsip yang sedang dipakai transaksi ini (supaya tidak hilang saat diubah).
   const categoryOptions = categories
     .filter((c) => c.kind === type && (!c.isArchived || c.id === transaction?.category.id))
-    .map((c) => ({ value: c.id, label: `${c.icon ? `${c.icon} ` : ""}${c.name}` }));
+    .map((c) => ({ value: c.id }));
   const walletOptions = wallets
     .filter((w) => !w.isArchived || w.id === transaction?.wallet.id)
     .map((w) => ({ value: w.id, label: w.name }));
@@ -87,62 +87,123 @@ export function TransactionForm({
   const prefillCategory = categoryOptions.some((o) => o.value === prefill?.categoryId) ? prefill?.categoryId : undefined;
   const defaultCategory = transaction ? (transaction.type === type ? transaction.category.id : undefined) : prefillCategory;
 
+  const [categoryId, setCategoryId] = useState<string | undefined>(state.values?.categoryId ?? defaultCategory);
+  const shownCategories = categories.filter((c) => c.kind === type && (!c.isArchived || c.id === transaction?.category.id));
+  const amountError = state.fieldErrors?.amount?.[0];
+  const categoryError = state.fieldErrors?.categoryId?.[0];
+
   return (
     <form action={action} noValidate>
       {transaction && <input type="hidden" name="id" value={transaction.id} />}
       <input type="hidden" name="type" value={type} />
-      <FieldGroup>
+      <input type="hidden" name="categoryId" value={categoryId ?? ""} />
+      <FieldGroup className="gap-5">
         <FormMessage state={state.ok ? {} : state} />
-        <div role="radiogroup" aria-label="Jenis transaksi" className="grid grid-cols-2 gap-2">
+        <div role="radiogroup" aria-label="Jenis transaksi" className="grid grid-cols-2 gap-1 rounded-full bg-muted p-1">
           {ENTRY_KINDS.map((k) => (
-            <Button
+            <button
               key={k}
               type="button"
               role="radio"
               aria-checked={type === k}
-              variant={type === k ? "default" : "outline"}
-              className={cn(type === k && k === "income" && "bg-emerald-600 hover:bg-emerald-600/90")}
-              onClick={() => setType(k)}
+              onClick={() => {
+                setType(k);
+                setCategoryId(undefined);
+              }}
+              className={cn(
+                "rounded-full py-2 text-sm font-semibold text-muted-foreground transition-colors",
+                type === k && "bg-card text-foreground shadow-sm",
+                type === k && k === "income" && "text-emerald-700 dark:text-emerald-400",
+              )}
             >
               {ENTRY_KIND_LABEL[k]}
-            </Button>
+            </button>
           ))}
         </div>
-        <FormField
-          name="amount"
-          label="Nominal (Rp)"
-          inputMode="numeric"
-          autoComplete="off"
-          placeholder="50.000"
-          defaultValue={transaction ? String(transaction.amount) : prefill?.amount}
-          state={state}
-        />
-        {/* key: daftar kategori berganti saat jenis berganti, jadi pilihan lama di-reset. */}
-        <FormSelect
-          key={type}
-          name="categoryId"
-          label="Kategori"
-          options={categoryOptions}
-          defaultValue={defaultCategory}
-          placeholder="Pilih kategori"
-          state={type === state.values?.type ? state : { ...state, values: undefined }}
-        />
-        <FormSelect name="walletId" label="Dompet" options={walletOptions} defaultValue={defaultWallet} state={state} />
-        <FormField name="occurredAt" label="Tanggal" type="date" max={today} defaultValue={transaction?.occurredAt ?? prefill?.occurredAt ?? today} state={state} />
+
+        {/* Nominal besar seperti referensi; tetap satu input teks (format "50.000" diterima server). */}
+        <div className="flex flex-col items-center gap-1">
+          <label htmlFor="amount" className="text-sm font-medium text-muted-foreground">
+            Nominal
+          </label>
+          <div className="flex items-baseline justify-center gap-1.5 text-4xl font-bold tabular-nums">
+            <span aria-hidden className="text-2xl text-muted-foreground">
+              Rp
+            </span>
+            <input
+              id="amount"
+              name="amount"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder="0"
+              aria-invalid={!!amountError || undefined}
+              aria-describedby={amountError ? "amount-error" : undefined}
+              defaultValue={state.values?.amount ?? (transaction ? String(transaction.amount) : prefill?.amount)}
+              className="field-sizing-content min-w-[2ch] max-w-[12ch] bg-transparent text-left outline-none placeholder:text-muted-foreground/40 focus-visible:underline focus-visible:decoration-primary focus-visible:decoration-2 focus-visible:underline-offset-8"
+            />
+          </div>
+          {amountError && (
+            <p id="amount-error" role="alert" className="text-sm text-destructive">
+              {amountError}
+            </p>
+          )}
+        </div>
+
+        <fieldset className="flex flex-col gap-2">
+          <legend className="mb-2 text-sm font-semibold">Kategori</legend>
+          <div role="radiogroup" aria-label="Kategori" aria-invalid={!!categoryError || undefined} className="grid grid-cols-3 gap-2">
+            {shownCategories.map((c) => {
+              const selected = categoryId === c.id;
+              return (
+                <button
+                  key={c.id}
+                  type="button"
+                  role="radio"
+                  aria-checked={selected}
+                  onClick={() => setCategoryId(c.id)}
+                  className={cn(
+                    "flex min-h-18 flex-col items-center justify-center gap-1 rounded-xl border bg-card px-1 py-2 text-xs font-medium transition-colors",
+                    selected ? "border-primary bg-secondary text-secondary-foreground" : "text-muted-foreground hover:border-primary/40",
+                  )}
+                >
+                  <span aria-hidden className="text-xl leading-none">
+                    {c.icon ?? "•"}
+                  </span>
+                  <span className="line-clamp-1">
+                    {c.name}
+                    {c.isArchived && " (arsip)"}
+                  </span>
+                </button>
+              );
+            })}
+          </div>
+          {categoryError && (
+            <p role="alert" className="text-sm text-destructive">
+              {categoryError}
+            </p>
+          )}
+        </fieldset>
+
+        <div className="grid grid-cols-2 gap-3">
+          <FormField name="occurredAt" label="Tanggal" type="date" max={today} defaultValue={transaction?.occurredAt ?? prefill?.occurredAt ?? today} state={state} />
+          <FormSelect name="walletId" label="Dompet" options={walletOptions} defaultValue={defaultWallet} state={state} />
+        </div>
         <FormField
           name="description"
-          label="Keterangan"
-          placeholder="Opsional, mis. beli bensin"
+          label="Catatan"
+          placeholder="Opsional, mis. makan siang bareng teman"
           maxLength={200}
           autoComplete="off"
           defaultValue={transaction?.description ?? prefill?.description}
           state={state}
         />
-        <div className="flex justify-end gap-2">
-          <Button type="button" variant="outline" onClick={onDone}>
+        <div className="flex flex-col gap-2">
+          <SubmitButton size="lg" className="h-12 w-full rounded-full text-base">
+            {online || transaction ? (transaction ? "Simpan perubahan" : "Simpan") : "Simpan offline"}
+          </SubmitButton>
+          <Button type="button" variant="ghost" onClick={onDone}>
             Batal
           </Button>
-          <SubmitButton>{online || transaction ? "Simpan" : "Simpan offline"}</SubmitButton>
         </div>
       </FieldGroup>
     </form>
