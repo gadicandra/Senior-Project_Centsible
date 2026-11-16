@@ -6,7 +6,8 @@ import type { TransactionPrefill } from "@/components/transaksi/transaction-form
 import type { CategoryOption, WalletOption } from "@/components/transaksi/types";
 import { CLIENT_TIMEOUT_MS, DESCRIPTION_MAX } from "@/lib/ai/limits";
 import type { ParseSuccess } from "@/lib/ai/types";
-import { AiTextInput } from "./ai-text-input";
+import { AddSheet } from "./add-sheet";
+import { CaptureContext } from "./capture-context";
 import { ConfirmCard } from "./confirm-card";
 
 const NETWORK_NOTICE = "Gagal menghubungi AI. Silakan isi form manual.";
@@ -46,8 +47,20 @@ function toNotice(body: unknown): string {
  * Jalur teks AI di klien (design §10.4): kirim kalimat → kartu konfirmasi, atau form manual
  * berisi isian awal bila AI gagal. Tidak ada yang tersimpan tanpa tombol Simpan.
  */
-export function AiCapture({ categories, wallets, today }: { categories: CategoryOption[]; wallets: WalletOption[]; today: string }) {
+export function AiCapture({
+  categories,
+  wallets,
+  today,
+  children,
+}: {
+  categories: CategoryOption[];
+  wallets: WalletOption[];
+  today: string;
+  /** Halaman di dalam layout; `useCapture().openAdd` membuka layar tambah dari mana saja. */
+  children?: React.ReactNode;
+}) {
   const [text, setText] = useState("");
+  const [addOpen, setAddOpen] = useState(false);
   const [pending, setPending] = useState(false);
   const [card, setCard] = useState<Card | null>(null);
   const [cardOpen, setCardOpen] = useState(false);
@@ -65,6 +78,7 @@ export function AiCapture({ categories, wallets, today }: { categories: Category
   );
 
   function openManual(prefill: TransactionPrefill, notice?: string) {
+    setAddOpen(false);
     setCardOpen(false);
     setManual({ prefill, notice });
     setManualOpen(true);
@@ -88,6 +102,7 @@ export function AiCapture({ categories, wallets, today }: { categories: Category
       const body: unknown = await res.json().catch(() => null);
       if (controller !== inFlight.current) return; // sudah digantikan kiriman baru
       if (res.status === 200 && isParseSuccess(body)) {
+        setAddOpen(false);
         setCard({ result: body, raw: input });
         setManualOpen(false);
         setCardOpen(true);
@@ -121,9 +136,20 @@ export function AiCapture({ categories, wallets, today }: { categories: Category
     setManualOpen(true);
   }, []);
 
+  const openAdd = useCallback(() => setAddOpen(true), []);
+
   return (
-    <>
-      <AiTextInput value={text} onValueChange={setText} onSubmit={submit} pending={pending} />
+    <CaptureContext.Provider value={{ openAdd }}>
+      {children}
+      <AddSheet
+        open={addOpen}
+        onOpenChange={setAddOpen}
+        text={text}
+        onTextChange={setText}
+        onSubmit={submit}
+        pending={pending}
+        onManual={() => openManual({})}
+      />
       <ConfirmCard
         result={card?.result ?? null}
         raw={card?.raw ?? ""}
@@ -144,6 +170,6 @@ export function AiCapture({ categories, wallets, today }: { categories: Category
         open={manualOpen}
         onOpenChange={setManualOpen}
       />
-    </>
+    </CaptureContext.Provider>
   );
 }

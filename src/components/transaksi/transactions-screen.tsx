@@ -2,8 +2,8 @@
 
 import Link from "next/link";
 import { useState } from "react";
-import { AiCapture } from "@/components/ai-input/ai-capture";
 import { DownloadIcon } from "lucide-react";
+import { PageHero } from "@/components/layout/page-hero";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { formatRupiah } from "@/lib/money";
 import { cn } from "@/lib/utils";
@@ -46,17 +46,32 @@ export function TransactionsScreen(props: TransactionsScreenProps) {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Transaksi</h1>
-        <TransactionDialog
-          categories={categories}
-          wallets={wallets}
-          today={today}
-          open={creating}
-          onOpenChange={setCreating}
-          trigger={<Button>Catat manual</Button>}
-        />
-      </div>
+      <PageHero
+        title="Transaksi"
+        actions={
+          <TransactionDialog
+            categories={categories}
+            wallets={wallets}
+            today={today}
+            open={creating}
+            onOpenChange={setCreating}
+            trigger={<Button className="rounded-full bg-white/15 text-hero-foreground hover:bg-white/25">Catat manual</Button>}
+          />
+        }
+        valueLabel={`Selisih · ${total} transaksi`}
+        value={formatRupiah(totals.income - totals.expense)}
+      >
+        <dl className="mt-4 grid grid-cols-2 gap-2 rounded-2xl bg-white/12 p-3 text-sm">
+          <div>
+            <dt className="text-hero-foreground/75">Pemasukan</dt>
+            <dd className="font-semibold tabular-nums">{formatRupiah(totals.income)}</dd>
+          </div>
+          <div>
+            <dt className="text-hero-foreground/75">Pengeluaran</dt>
+            <dd className="font-semibold tabular-nums">{formatRupiah(totals.expense)}</dd>
+          </div>
+        </dl>
+      </PageHero>
 
       <TransactionFilters filters={filters} categories={categories} wallets={wallets} />
 
@@ -64,29 +79,15 @@ export function TransactionsScreen(props: TransactionsScreenProps) {
       <a
         href={exportHref(query)}
         download
-        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "self-start")}
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "self-start rounded-full")}
       >
         <DownloadIcon aria-hidden />
         Unduh CSV
       </a>
 
-      <dl className="grid grid-cols-3 gap-3 rounded-lg border p-4 text-sm">
-        <div>
-          <dt className="text-muted-foreground">Pemasukan</dt>
-          <dd className="font-semibold text-emerald-600 tabular-nums dark:text-emerald-400">{formatRupiah(totals.income)}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Pengeluaran</dt>
-          <dd className="font-semibold tabular-nums">{formatRupiah(totals.expense)}</dd>
-        </div>
-        <div>
-          <dt className="text-muted-foreground">Selisih</dt>
-          <dd className="font-semibold tabular-nums">{formatRupiah(totals.income - totals.expense)}</dd>
-        </div>
-      </dl>
 
       {items.length === 0 ? (
-        <div className="rounded-lg border border-dashed p-10 text-center text-muted-foreground">
+        <div className="rounded-2xl border-2 border-dashed p-10 text-center text-muted-foreground">
           {Object.values(filters).some(Boolean)
             ? "Tidak ada transaksi yang cocok dengan filter."
             : "Belum ada transaksi. Ketik di kolom bawah, mis. “makan siang 25rb”, atau pakai tombol “Catat manual”."}
@@ -115,7 +116,6 @@ export function TransactionsScreen(props: TransactionsScreenProps) {
           </div>
         </nav>
       )}
-      <AiCapture categories={categories} wallets={wallets} today={today} />
     </div>
   );
 }
