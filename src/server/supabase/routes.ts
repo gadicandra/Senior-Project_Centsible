@@ -1,5 +1,6 @@
 // Daftar path yang boleh diakses tanpa login. Dipakai src/proxy.ts.
-const PUBLIC_PREFIXES = ["/login", "/register", "/reset-password", "/auth/", "/api/health"];
+// /api/cron/: dipanggil Vercel Cron tanpa sesi; route-nya sendiri mewajibkan CRON_SECRET.
+const PUBLIC_PREFIXES = ["/login", "/register", "/reset-password", "/auth/", "/api/health", "/api/cron/"];
 // Halaman yang tidak relevan bagi pengguna yang sudah login.
 const GUEST_ONLY = ["/login", "/register", "/reset-password"];
 

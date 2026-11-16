@@ -5,11 +5,12 @@ import { getAnomalies } from "@/server/services/anomalies";
 import { getBudgetOverview } from "@/server/services/budgets";
 import { listCategories } from "@/server/services/categories";
 import { getProfile } from "@/server/services/profile";
+import { getLatestWeekly } from "@/server/services/weekly";
 import { listWallets } from "@/server/services/wallets";
 
 export default async function Page() {
   const claims = await requireClaims();
-  const [profile, wallets, categories, budgets, anomalies] = await Promise.all([
+  const [profile, wallets, categories, budgets, anomalies, weekly] = await Promise.all([
     getProfile(claims),
     listWallets(claims),
     listCategories(claims),
@@ -23,6 +24,11 @@ export default async function Page() {
       console.error("anomalies_failed", error);
       return [];
     }),
+    // Ringkasan bersifat tambahan: gagal dimuat = tidak ditampilkan.
+    getLatestWeekly(claims).catch((error: unknown) => {
+      console.error("weekly_load_failed", error);
+      return null;
+    }),
   ]);
   return (
     <HomeScreen
@@ -32,6 +38,7 @@ export default async function Page() {
       today={todayIn(profile?.timezone ?? "Asia/Jakarta")}
       budgets={budgets}
       anomalies={anomalies}
+      weekly={weekly}
     />
   );
 }

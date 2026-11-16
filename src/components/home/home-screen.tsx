@@ -3,11 +3,13 @@ import { AiCapture } from "@/components/ai-input/ai-capture";
 import type { CategoryOption, WalletOption } from "@/components/transaksi/types";
 import { buttonVariants } from "@/components/ui/button";
 import type { BudgetOverview } from "@/lib/budget";
+import type { WeeklyInsight } from "@/lib/weekly";
 import { formatRupiah } from "@/lib/money";
 import { cn } from "@/lib/utils";
 import type { AnomalyView } from "@/lib/anomaly";
 import { AnomalyAlert } from "./anomaly-alert";
 import { BudgetGlance } from "./budget-glance";
+import { WeeklyCard } from "./weekly-card";
 
 type WalletBalance = WalletOption & { balance: number };
 
@@ -19,6 +21,7 @@ export function HomeScreen({
   today,
   budgets,
   anomalies = [],
+  weekly = null,
 }: {
   displayName: string;
   wallets: WalletBalance[];
@@ -26,6 +29,7 @@ export function HomeScreen({
   today: string;
   budgets: BudgetOverview | null;
   anomalies?: AnomalyView[];
+  weekly?: WeeklyInsight | null;
 }) {
   const total = wallets.reduce((sum, w) => sum + w.balance, 0);
   return (
@@ -47,6 +51,7 @@ export function HomeScreen({
           </li>
         ))}
       </ul>
+      <WeeklyCard insight={weekly} />
       <BudgetGlance overview={budgets} />
       {/* Tautan bergaya tombol: Base UI Button hanya untuk tombol sungguhan (peran "button"). */}
       <div className="flex flex-wrap gap-2">
