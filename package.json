@@ -14,7 +14,8 @@
     "db:deploy": "prisma migrate deploy",
     "db:status": "prisma migrate status",
     "postinstall": "prisma generate",
-    "test:db": "vitest run --config vitest.db.config.mts"
+    "test:db": "vitest run --config vitest.db.config.mts",
+    "eval:ai": "vitest run --config vitest.eval.config.mts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "1.1.0",
