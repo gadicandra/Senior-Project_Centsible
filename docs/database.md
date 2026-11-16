@@ -490,11 +490,13 @@ Aturan pemakaiannya:
 |---|---|---|
 | Semua Server Action & Route Handler yang melayani pengguna | **`withRls()`** | Basis data yang menolak akses lintas pengguna, bukan `where userId` |
 | Migrasi | Prisma CLI (role `postgres`) | Memang perlu hak penuh |
-| Job terjadwal FR 13/14 | Prisma biasa tanpa `withRls` | Memang perlu membaca semua pengguna (§8.2) |
+| Job terjadwal FR 13/14 | **`asService()`** (`set local role service_role`) | Memang perlu membaca semua pengguna (§8.2); setiap query wajib memfilter `userId` |
 
 `FORCE ROW LEVEL SECURITY` sengaja **tidak** dipasang, justru supaya jalur job terjadwal tetap bisa bekerja.
 
-> **Sisa risiko yang perlu disadari:** kalau suatu saat ada kode jalur pengguna yang lupa memakai `withRls()`, query itu akan berhasil dan membaca lintas pengguna. Pengetatan lanjutan yang disarankan sebelum uji coba pengguna nyata (Subproyek H): buat satu role login khusus aplikasi yang **bukan pemilik tabel**, tanpa `BYPASSRLS`, dan tanpa `GRANT` langsung ke tabel — anggota role `authenticated` saja. Dengan begitu query yang lupa `withRls()` **gagal** dengan `42501`, bukan diam-diam membocorkan data. Perubahan ini hanya menyentuh `DATABASE_URL`, tidak menyentuh skema.
+> **Role login khusus aplikasi (migrasi 06–07, 16 Nov 2026).** `centsible_app` bisa login, **bukan** pemilik tabel, tanpa `BYPASSRLS`, `NOINHERIT`, dan tanpa `GRANT` langsung ke tabel. Ia anggota `authenticated` (dipakai `withRls()`) dan `service_role` (dipakai `asService()` untuk job terjadwal). Query yang lupa `withRls()`/`asService()` **gagal** dengan `42501`, bukan membocorkan data (dibuktikan `tests/db/app-role.test.ts`).
+>
+> **Mengaktifkan:** (1) `alter role centsible_app with password '<acak>';` di SQL Editor Supabase; (2) ganti `DATABASE_URL` aplikasi ke `postgres://centsible_app.<project-ref>:<password>@<pooler>:6543/postgres?pgbouncer=true`; (3) `DIRECT_URL` tetap `postgres` (dipakai `prisma migrate`). Selama `DATABASE_URL` belum diganti, aplikasi tetap jalan sebagai `postgres` seperti sebelumnya.
 
 ---
 
@@ -960,7 +962,7 @@ Ditulis di sini supaya tidak ada yang mengira basis data sudah menjaganya:
 | **`BigInt` di JavaScript** | `JSON.stringify` melempar error untuk `BigInt`, sehingga nilai `amount` tidak bisa langsung dikirim dari Server Component ke Client Component | Ubah ke `Number` di batas `src/server/services/*` (nilai rupiah jauh di bawah `Number.MAX_SAFE_INTEGER`), jangan di komponen |
 | **Error FK muncul saat `COMMIT`** | Menghapus dompet/kategori yang masih dipakai gagal dengan pesan mentah PostgreSQL | Hitung dulu pemakaiannya di Server Action, tawarkan "Arsipkan" ([§5.2](#52-kenapa-dua-fk-itu-deferrable-initially-deferred)) |
 | **`prisma migrate dev` bisa mereset basis data** | Kehilangan data dev | Larangan ditulis di `schema.prisma` dan [§14.1](#141-keputusan-sql-ditulis-tangan-diterapkan-prisma-migrate-deploy); yang dipakai hanya `pnpm db:deploy` |
-| **Lupa `withRls()`** | Query membaca lintas pengguna | Pengetatan role login khusus aplikasi sebelum Subproyek H ([§7.4](#74-jebakan-prisma-vs-rls-dan-cara-menutupnya)) |
+| **Lupa `withRls()`** | Query membaca lintas pengguna | Role login `centsible_app` (migrasi 06–07): query gagal `42501` setelah `DATABASE_URL` diganti ([§7.4](#74-jebakan-prisma-vs-rls-dan-cara-menutupnya)) |
 | **Trigger pendaftaran gagal** | Pendaftaran ikut gagal | `bootstrap_user()` idempoten dan bisa dipanggil ulang; uji pendaftaran masuk daftar uji wajib [§14.6](#146-uji-yang-wajib-ada) |
 | **Satu mata uang per pengguna** | Transaksi valas belum didukung | Di luar lingkup FR; `users.currency` sudah disiapkan sebagai tempat perluasan |
 | **`occurred_at` bertipe `date`** | Jam kejadian tidak tersimpan, *"tadi pagi"* hanya menghasilkan tanggal | Sesuai ERD. Urutan dalam satu hari memakai `created_at` |
