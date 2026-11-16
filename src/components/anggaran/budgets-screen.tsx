@@ -1,6 +1,7 @@
 "use client";
 
 import { PlusIcon } from "lucide-react";
+import { PageHero } from "@/components/layout/page-hero";
 import { Button } from "@/components/ui/button";
 import { formatRange, type BudgetOverview, type BudgetView } from "@/lib/budget";
 import { formatMonthLabel } from "@/lib/summary";
@@ -25,6 +26,17 @@ export function BudgetsScreen({ overview, categories }: { overview: BudgetOvervi
       }
     />
   );
+  const heroButton = (
+    <BudgetFormDialog
+      categories={available}
+      trigger={
+        <Button size="sm" disabled={full} className="rounded-full bg-white/15 text-hero-foreground hover:bg-white/25">
+          <PlusIcon aria-hidden />
+          Tambah anggaran
+        </Button>
+      }
+    />
+  );
   const sections: { id: string; title: string; items: BudgetView[] }[] = [
     { id: "anggaran-bulanan", title: `Bulanan · ${formatMonthLabel(today.slice(0, 7))}`, items: budgets.filter((b) => b.period === "monthly") },
     { id: "anggaran-mingguan", title: `Mingguan · ${formatRange(week)}`, items: budgets.filter((b) => b.period === "weekly") },
@@ -33,19 +45,17 @@ export function BudgetsScreen({ overview, categories }: { overview: BudgetOvervi
   return (
     <div className="flex flex-col gap-6">
       <div className="flex flex-col gap-2">
-        <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-          <h1 className="text-2xl font-semibold">Anggaran</h1>
-          {addButton}
-        </div>
+        <PageHero
+          title="Anggaran"
+          subtitle="Batas pengeluaran per kategori, dihitung dari transaksi di minggu dan bulan berjalan."
+          actions={heroButton}
+        />
         {full && categories.length > 0 && (
           <p className="text-sm text-muted-foreground">Semua kategori pengeluaran sudah punya anggaran mingguan dan bulanan.</p>
         )}
-        <p className="text-muted-foreground">
-          Batas pengeluaran per kategori. Dihitung dari transaksi pengeluaran di minggu dan bulan berjalan.
-        </p>
       </div>
       {budgets.length === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-muted-foreground">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center text-muted-foreground">
           <p className="font-medium text-foreground">Belum ada anggaran.</p>
           <p>Tetapkan batas pengeluaran per kategori supaya tahu kapan harus berhemat.</p>
           {addButton}

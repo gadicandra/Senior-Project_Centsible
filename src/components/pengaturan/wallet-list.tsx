@@ -26,7 +26,7 @@ export function WalletList({ wallets }: { wallets: WalletRow[] }) {
         <h2 className="text-lg font-semibold">Dompet</h2>
         <WalletFormDialog trigger={<Button size="sm">Tambah dompet</Button>} />
       </div>
-      <ul className="divide-y rounded-lg border">
+      <ul className="divide-y rounded-2xl bg-card shadow-sm ring-1 ring-border overflow-hidden">
         {wallets.map((w) => (
           <WalletItem key={w.id} wallet={w} />
         ))}

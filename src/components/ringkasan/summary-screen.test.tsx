@@ -45,7 +45,7 @@ describe("SummaryScreen", () => {
     expect(screen.getByRole("heading", { level: 1, name: "Ringkasan" })).toBeDefined();
     expect(screen.getByText("Oktober 2026")).toBeDefined();
     expect(screen.getByText(/1\.250\.000/)).toBeDefined();
-    expect(screen.getByText("Saldo saat ini, semua dompet aktif")).toBeDefined();
+    expect(screen.getByText("Total saldo · semua dompet aktif")).toBeDefined();
     const dl = document.querySelector("dl")!;
     expect(within(dl).getByText("Selisih").nextElementSibling?.textContent).toMatch(/-Rp\s50\.000/);
   });
@@ -83,13 +83,12 @@ describe("SummaryScreen", () => {
       expect(screen.queryByRole("link", { name: "Bulan sebelumnya" })).toBeNull();
       expect(screen.getByRole("link", { name: "Bulan berikutnya" }).getAttribute("href")).toBe("/ringkasan?month=2020-02");
     });
-    test("tautan aktif bergaris tepi seperti placeholder nonaktif (border-border, bukan border-transparent)", () => {
-      render(<SummaryScreen summary={summary("2026-09")} currentMonth="2026-10" today="2026-10-25" />);
-      for (const name of ["Bulan sebelumnya", "Bulan berikutnya"]) {
-        const classes = screen.getByRole("link", { name }).className.split(/\s+/);
-        expect(classes).toContain("border-border");
-        expect(classes).not.toContain("border-transparent");
-      }
+    test("tombol bulan aktif bergaya sama dengan placeholder nonaktif (lingkaran di atas kartu gradien)", () => {
+      render(<SummaryScreen summary={summary("2026-10")} currentMonth="2026-10" today="2026-10-25" />);
+      const active = screen.getByRole("link", { name: "Bulan sebelumnya" }).className;
+      const placeholder = document.querySelector('nav[aria-label="Pilih bulan"] span[aria-hidden="true"]')!.className;
+      expect(active).toContain("rounded-full");
+      expect(placeholder.replace(" pointer-events-none opacity-50", "")).toBe(active);
     });
   });
 

@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { buttonVariants } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
+import { PageHero } from "@/components/layout/page-hero";
 import { formatRupiah } from "@/lib/money";
 import { formatMonthLabel, type SummaryView } from "@/lib/summary";
 import { CategoryBreakdown } from "./category-breakdown";
@@ -17,18 +17,13 @@ export function SummaryScreen({ summary, currentMonth, today }: { summary: Summa
   ];
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <h1 className="text-2xl font-semibold">Ringkasan</h1>
-        <MonthNav month={summary.month} currentMonth={currentMonth} />
-      </div>
-      <Card>
-        <CardContent className="flex flex-col gap-1">
-          <p className="text-muted-foreground">Total saldo</p>
-          <p className="text-3xl font-semibold break-words tabular-nums">{formatRupiah(summary.totalBalance)}</p>
-          <p className="text-xs text-muted-foreground">Saldo saat ini, semua dompet aktif</p>
-        </CardContent>
-      </Card>
-      <dl className="grid grid-cols-1 gap-3 rounded-lg border p-4 text-sm sm:grid-cols-3">
+      <PageHero
+        title="Ringkasan"
+        actions={<MonthNav month={summary.month} currentMonth={currentMonth} hero />}
+        valueLabel="Total saldo · semua dompet aktif"
+        value={formatRupiah(summary.totalBalance)}
+      />
+      <dl className="grid grid-cols-1 gap-3 rounded-2xl bg-card shadow-sm ring-1 ring-border p-4 text-sm sm:grid-cols-3">
         {totals.map((t) => (
           <div key={t.label} className="flex justify-between gap-2 sm:flex-col sm:justify-start">
             <dt className="text-muted-foreground">{t.label}</dt>
@@ -37,7 +32,7 @@ export function SummaryScreen({ summary, currentMonth, today }: { summary: Summa
         ))}
       </dl>
       {summary.transactionCount === 0 ? (
-        <div className="flex flex-col items-center gap-3 rounded-lg border border-dashed p-10 text-center text-muted-foreground">
+        <div className="flex flex-col items-center gap-3 rounded-2xl border-2 border-dashed p-10 text-center text-muted-foreground">
           <p>Belum ada transaksi di {label}.</p>
           <Link href="/" className={buttonVariants()}>
             Catat transaksi

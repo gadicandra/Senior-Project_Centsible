@@ -7,7 +7,7 @@ const FALLBACK_COLOR = "#64748B";
 export function CategoryBreakdown({ items, from, to }: { items: CategoryShare[]; from: string; to: string }) {
   if (items.length === 0) return <p className="text-sm text-muted-foreground">Belum ada pengeluaran di bulan ini.</p>;
   return (
-    <ol className="flex flex-col divide-y rounded-lg border">
+    <ol className="flex flex-col divide-y rounded-2xl bg-card shadow-sm ring-1 ring-border overflow-hidden">
       {items.map((c) => {
         const color = c.color ?? FALLBACK_COLOR;
         const href = `/transaksi?${new URLSearchParams({ type: "expense", categoryId: c.id, from, to })}`;
