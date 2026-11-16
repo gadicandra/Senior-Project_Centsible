@@ -2,7 +2,7 @@ import { describe, expect, test } from "vitest";
 import { isApiPath, isGuestOnlyPath, isPublicPath } from "./routes";
 
 describe("isPublicPath", () => {
-  test.each(["/login", "/register", "/reset-password", "/auth/callback", "/auth/confirm", "/api/health"])(
+  test.each(["/login", "/register", "/reset-password", "/auth/callback", "/auth/confirm", "/api/health", "/api/cron/weekly"])(
     "%s publik",
     (p) => expect(isPublicPath(p)).toBe(true),
   );
