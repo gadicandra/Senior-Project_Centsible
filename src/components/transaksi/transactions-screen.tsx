@@ -3,8 +3,10 @@
 import Link from "next/link";
 import { useState } from "react";
 import { AiCapture } from "@/components/ai-input/ai-capture";
-import { Button } from "@/components/ui/button";
+import { DownloadIcon } from "lucide-react";
+import { Button, buttonVariants } from "@/components/ui/button";
 import { formatRupiah } from "@/lib/money";
+import { cn } from "@/lib/utils";
 import { TransactionDialog } from "./transaction-dialog";
 import { TransactionFilters } from "./transaction-filters";
 import { TransactionList } from "./transaction-list";
@@ -22,6 +24,14 @@ export type TransactionsScreenProps = {
   today: string;
   query: string;
 };
+
+/** Parameter halaman tidak ikut: unduhan selalu semua halaman. */
+export function exportHref(query: string): string {
+  const params = new URLSearchParams(query);
+  params.delete("page");
+  const qs = params.toString();
+  return qs ? `/api/export?${qs}` : "/api/export";
+}
 
 export function TransactionsScreen(props: TransactionsScreenProps) {
   const { items, total, page, pageCount, totals, filters, categories, wallets, today, query } = props;
@@ -49,6 +59,16 @@ export function TransactionsScreen(props: TransactionsScreenProps) {
       </div>
 
       <TransactionFilters filters={filters} categories={categories} wallets={wallets} />
+
+      {/* Unduhan memakai filter yang sedang aktif (FR 15); <a download> karena ini file, bukan halaman. */}
+      <a
+        href={exportHref(query)}
+        download
+        className={cn(buttonVariants({ variant: "outline", size: "sm" }), "self-start")}
+      >
+        <DownloadIcon aria-hidden />
+        Unduh CSV
+      </a>
 
       <dl className="grid grid-cols-3 gap-3 rounded-lg border p-4 text-sm">
         <div>
