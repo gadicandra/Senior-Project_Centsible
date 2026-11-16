@@ -1,6 +1,7 @@
 import { z } from "zod";
 
-const email = z.email("Email tidak valid").trim().toLowerCase();
+// Pangkas dulu baru validasi: email yang ditempel dengan spasi di ujung tetap diterima.
+const email = z.string().trim().toLowerCase().pipe(z.email("Email tidak valid"));
 const password = z.string().min(8, "Kata sandi minimal 8 karakter").max(72, "Kata sandi maksimal 72 karakter");
 
 export const signInSchema = z.object({
