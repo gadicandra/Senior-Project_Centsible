@@ -8,7 +8,7 @@ const label = (d: string) => fmt.format(new Date(`${d}T00:00:00Z`));
 export function WeeklyCard({ insight }: { insight: WeeklyInsight | null }) {
   if (!insight) return null;
   return (
-    <section aria-labelledby="weekly-title" className="flex flex-col gap-2 rounded-lg border p-4">
+    <section aria-labelledby="weekly-title" className="flex flex-col gap-2 rounded-2xl bg-card shadow-sm ring-1 ring-border p-4">
       <h2 id="weekly-title" className="flex items-center gap-1.5 font-semibold">
         <SparklesIcon className="size-4 shrink-0" aria-hidden />
         Ringkasan minggu lalu

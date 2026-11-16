@@ -3,17 +3,17 @@ import { todayIn } from "@/lib/dates";
 import { requireClaims } from "@/server/auth/session";
 import { getAnomalies } from "@/server/services/anomalies";
 import { getBudgetOverview } from "@/server/services/budgets";
-import { listCategories } from "@/server/services/categories";
 import { getProfile } from "@/server/services/profile";
+import { getSummary } from "@/server/services/summary";
 import { getLatestWeekly } from "@/server/services/weekly";
 import { listWallets } from "@/server/services/wallets";
 
 export default async function Page() {
   const claims = await requireClaims();
-  const [profile, wallets, categories, budgets, anomalies, weekly] = await Promise.all([
-    getProfile(claims),
+  const profile = await getProfile(claims);
+  const today = todayIn(profile?.timezone ?? "Asia/Jakarta");
+  const [wallets, budgets, anomalies, weekly, summary] = await Promise.all([
     listWallets(claims),
-    listCategories(claims),
     // Beranda tetap tampil walau anggaran gagal dimuat.
     getBudgetOverview(claims).catch((error: unknown) => {
       console.error("budget_overview_failed", error);
@@ -29,13 +29,18 @@ export default async function Page() {
       console.error("weekly_load_failed", error);
       return null;
     }),
+    // Angka di kartu atas: bulan berjalan menurut zona waktu pengguna.
+    getSummary(claims, today.slice(0, 7)).catch((error: unknown) => {
+      console.error("summary_load_failed", error);
+      return null;
+    }),
   ]);
   return (
     <HomeScreen
       displayName={profile?.fullName ?? profile?.email ?? "Pengguna"}
       wallets={wallets.filter((w) => !w.isArchived)}
-      categories={categories}
-      today={todayIn(profile?.timezone ?? "Asia/Jakarta")}
+      today={today}
+      summary={summary}
       budgets={budgets}
       anomalies={anomalies}
       weekly={weekly}
