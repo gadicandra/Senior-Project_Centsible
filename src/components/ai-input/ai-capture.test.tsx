@@ -2,6 +2,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, test, vi } from "vitest";
 import type { ParseFailure, ParseSuccess } from "@/lib/ai/types";
 import { AiCapture } from "./ai-capture";
+import { useCapture } from "./capture-context";
 
 vi.mock("@/server/actions/transactions", () => ({
   saveAiTransaction: vi.fn(async () => ({ ok: true, message: "Transaksi disimpan." })),
@@ -57,8 +58,23 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 
+/** Tombol uji yang membuka layar "Tambah transaksi" lewat konteks, seperti tombol + di navigasi. */
+function OpenAdd() {
+  const { openAdd } = useCapture();
+  return (
+    <button type="button" onClick={openAdd}>
+      Buka tambah
+    </button>
+  );
+}
+
 function renderCapture() {
-  render(<AiCapture categories={categories} wallets={wallets} today="2026-09-23" />);
+  render(
+    <AiCapture categories={categories} wallets={wallets} today="2026-09-23">
+      <OpenAdd />
+    </AiCapture>,
+  );
+  fireEvent.click(screen.getByRole("button", { name: "Buka tambah" }));
   const input = screen.getByLabelText("Ketik transaksi") as HTMLInputElement;
   const form = screen.getByRole("form", { name: "Catat transaksi dengan kalimat" });
   const send = (text: string) => {
@@ -72,12 +88,28 @@ const manualDialog = () => screen.queryByRole("dialog", { name: "Catat transaksi
 const card = () => screen.queryByRole("dialog", { name: "Periksa hasil baca AI" });
 
 describe("AiCapture", () => {
-  test("input berlabel, maxLength 300, tanpa tombol mic", () => {
+  test("input berlabel, maxLength 300, tombol kirim & rekam suara selalu tampil", () => {
     const { input } = renderCapture();
     expect(input.maxLength).toBe(300);
     expect(input.getAttribute("enterkeyhint")).toBe("send");
     expect(screen.getByRole("button", { name: "Kirim" })).toBeDefined();
-    expect(screen.queryByRole("button", { name: /mic|suara|rekam/i })).toBeNull();
+    // Sejak redesain mikrofon selalu tampil; bila suara mati, menekannya menjelaskan alasannya (FR 7).
+    expect(screen.getByRole("button", { name: "Rekam suara" })).toBeDefined();
+  });
+
+  test("mikrofon saat fitur suara mati: memberi penjelasan, tidak merekam (FR 7)", async () => {
+    const { toast } = await import("sonner");
+    const info = vi.spyOn(toast, "info").mockImplementation(() => "");
+    renderCapture();
+    fireEvent.click(screen.getByRole("button", { name: "Rekam suara" }));
+    expect(info).toHaveBeenCalledWith("Input suara belum tersedia. Silakan ketik transaksinya.");
+    info.mockRestore();
+  });
+
+  test("tombol 'Isi form manual' di layar tambah membuka form manual kosong", async () => {
+    renderCapture();
+    fireEvent.click(screen.getByRole("button", { name: "Isi form manual" }));
+    await waitFor(() => expect(manualDialog()).not.toBeNull());
   });
 
   test("kirim kosong menampilkan pesan dan tidak memanggil fetch", () => {
@@ -92,7 +124,7 @@ describe("AiCapture", () => {
     fetchMock.mockImplementation(hanging);
     const { send } = renderCapture();
     send("makan siang 25rb");
-    const live = document.querySelector('[aria-live="polite"]')!;
+    const live = document.getElementById("ai-text-status")!;
     await waitFor(() => expect(live.textContent).toBe("Membaca transaksi…"));
     const button = screen.getByRole("button", { name: "Kirim" }) as HTMLButtonElement;
     expect(button.disabled).toBe(true);
@@ -113,14 +145,15 @@ describe("AiCapture", () => {
     expect(JSON.parse(String(init?.body))).toEqual({ text: "makan siang 25rb" });
   });
 
-  test("Simpan sukses menutup kartu dan mengosongkan input", async () => {
+  test("Simpan sukses menutup kartu; layar tambah dibuka lagi dengan kolom kosong", async () => {
     fetchMock.mockResolvedValue(respond(200, success));
-    const { input, send } = renderCapture();
+    const { send } = renderCapture();
     send("makan siang 25rb");
     await waitFor(() => expect(card()).not.toBeNull());
     fireEvent.click(screen.getByRole("button", { name: "Simpan" }));
-    await waitFor(() => expect(input.value).toBe(""));
     await waitFor(() => expect(screen.queryByRole("button", { name: "Simpan" })).toBeNull());
+    fireEvent.click(await screen.findByRole("button", { name: "Buka tambah" }));
+    expect(((await screen.findByLabelText("Ketik transaksi")) as HTMLInputElement).value).toBe("");
   });
 
   test("429 membuka form manual berisi deskripsi, nominal (angka → string) dan notice", async () => {
@@ -129,8 +162,8 @@ describe("AiCapture", () => {
     send("makan siang 20rb");
     await waitFor(() => expect(manualDialog()).not.toBeNull());
     expect(card()).toBeNull();
-    expect((screen.getByLabelText("Keterangan") as HTMLInputElement).value).toBe("makan siang 20rb");
-    expect((screen.getByLabelText("Nominal (Rp)") as HTMLInputElement).value).toBe("20000");
+    expect((screen.getByLabelText("Catatan") as HTMLInputElement).value).toBe("makan siang 20rb");
+    expect((screen.getByLabelText("Nominal") as HTMLInputElement).value).toBe("20000");
     expect(screen.getByRole("status").textContent).toBe("Kuota AI harian kamu sudah habis.");
   });
 
@@ -139,7 +172,7 @@ describe("AiCapture", () => {
     const { send } = renderCapture();
     send("bensin 30rb");
     await waitFor(() => expect(manualDialog()).not.toBeNull());
-    expect((screen.getByLabelText("Keterangan") as HTMLInputElement).value).toBe("bensin 30rb");
+    expect((screen.getByLabelText("Catatan") as HTMLInputElement).value).toBe("bensin 30rb");
     expect(screen.getByRole("status").textContent).toBe("Gagal menghubungi AI. Silakan isi form manual.");
   });
 
@@ -156,7 +189,7 @@ describe("AiCapture", () => {
     const { send } = renderCapture();
     send("bensin 30rb");
     await waitFor(() => expect(manualDialog()).not.toBeNull());
-    expect((screen.getByLabelText("Keterangan") as HTMLInputElement).value).toBe("bensin 30rb");
+    expect((screen.getByLabelText("Catatan") as HTMLInputElement).value).toBe("bensin 30rb");
     expect(screen.getByRole("status").textContent).toBe("Gagal menghubungi AI. Silakan isi form manual.");
   });
 
@@ -213,7 +246,7 @@ describe("AiCapture", () => {
       await vi.advanceTimersByTimeAsync(500);
     });
     expect(manualDialog()).not.toBeNull();
-    expect((screen.getByLabelText("Keterangan") as HTMLInputElement).value).toBe("makan siang 25rb");
+    expect((screen.getByLabelText("Catatan") as HTMLInputElement).value).toBe("makan siang 25rb");
   });
 
   test("tetap berfungsi tanpa AbortSignal.any / AbortSignal.timeout", async () => {

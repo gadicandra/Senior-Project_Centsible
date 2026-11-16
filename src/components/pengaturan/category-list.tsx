@@ -34,7 +34,7 @@ export function CategoryList({ categories }: { categories: CategoryRow[] }) {
               }
             />
           </div>
-          <ul className="divide-y rounded-lg border">
+          <ul className="divide-y rounded-2xl bg-card shadow-sm ring-1 ring-border overflow-hidden">
             {categories
               .filter((c) => c.kind === kind)
               .map((c) => (

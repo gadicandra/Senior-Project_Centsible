@@ -1,12 +1,13 @@
 import Link from "next/link";
+import { PageHero } from "@/components/layout/page-hero";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { DeleteAccountDialog } from "./delete-account-dialog";
 
 export function AccountScreen({ email, fullName }: { email: string; fullName: string | null }) {
   return (
     <div className="flex flex-col gap-6">
-      <h1 className="text-2xl font-semibold">Akun</h1>
-      <Card>
+      <PageHero title="Akun" subtitle={email} />
+      <Card className="rounded-2xl">
         <CardHeader>
           <CardTitle>{fullName ?? "Tanpa nama"}</CardTitle>
           <CardDescription>{email}</CardDescription>
@@ -17,7 +18,7 @@ export function AccountScreen({ email, fullName }: { email: string; fullName: st
           </Link>
         </CardContent>
       </Card>
-      <Card className="border-destructive/40">
+      <Card className="rounded-2xl border-destructive/40">
         <CardHeader>
           <CardTitle>Hapus akun</CardTitle>
           <CardDescription>

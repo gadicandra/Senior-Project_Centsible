@@ -1,35 +1,37 @@
 "use client";
 
+import { ChartLineIcon, HouseIcon, ListIcon, PiggyBankIcon, SettingsIcon } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { cn } from "@/lib/utils";
 
-const LINKS = [
-  { href: "/", label: "Beranda" },
-  { href: "/ringkasan", label: "Ringkasan" },
-  { href: "/transaksi", label: "Transaksi" },
-  { href: "/anggaran", label: "Anggaran" },
-  { href: "/pengaturan", label: "Pengaturan" },
-];
+// Urutan tetap (desain #31 dan redesain 16 Nov). Di ponsel tampil sebagai bilah bawah dengan
+// tombol + di tengah; dari `md` sebagai baris tautan di header.
+export const LINKS = [
+  { href: "/", label: "Beranda", icon: HouseIcon },
+  { href: "/ringkasan", label: "Ringkasan", icon: ChartLineIcon },
+  { href: "/transaksi", label: "Transaksi", icon: ListIcon },
+  { href: "/anggaran", label: "Anggaran", icon: PiggyBankIcon },
+  { href: "/pengaturan", label: "Pengaturan", icon: SettingsIcon },
+] as const;
 
+export const isActive = (href: string, pathname: string) => (href === "/" ? pathname === "/" : pathname.startsWith(href));
+
+/** Navigasi header (desktop). */
 export function NavLinks({ className }: { className?: string }) {
   const pathname = usePathname();
   return (
-    <nav className={cn(
-        // Lima label harus muat di 390 px: di bawah sm pakai text-xs + px-1.5 (desain #31 B7).
-        "flex w-full items-center justify-between gap-0 overflow-x-auto whitespace-nowrap text-xs sm:w-auto sm:justify-start sm:gap-1 sm:text-sm",
-        className,
-      )}>
+    <nav aria-label="Navigasi utama" className={cn("flex items-center gap-1 text-sm", className)}>
       {LINKS.map(({ href, label }) => {
-        const active = href === "/" ? pathname === "/" : pathname.startsWith(href);
+        const active = isActive(href, pathname);
         return (
           <Link
             key={href}
             href={href}
             aria-current={active ? "page" : undefined}
             className={cn(
-              "rounded-md px-1.5 py-2 text-muted-foreground sm:px-2.5 sm:py-1.5 hover:text-foreground",
-              active && "bg-muted font-medium text-foreground",
+              "rounded-full px-3 py-1.5 text-muted-foreground transition-colors hover:text-foreground",
+              active && "bg-secondary font-semibold text-secondary-foreground",
             )}
           >
             {label}

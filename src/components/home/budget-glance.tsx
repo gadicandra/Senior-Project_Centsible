@@ -9,7 +9,7 @@ const linkClass = cn(buttonVariants({ variant: "outline", size: "sm" }), "self-s
 /** Kartu Beranda: 3 anggaran paling dekat ke batas. `null` = gagal dimuat, Beranda tetap tampil. */
 export function BudgetGlance({ overview }: { overview: BudgetOverview | null }) {
   return (
-    <section aria-labelledby="budget-glance-title" className="flex flex-col gap-3 rounded-lg border p-4">
+    <section aria-labelledby="budget-glance-title" className="flex flex-col gap-3 rounded-2xl bg-card shadow-sm ring-1 ring-border p-4">
       <h2 id="budget-glance-title" className="font-semibold">
         Anggaran
       </h2>

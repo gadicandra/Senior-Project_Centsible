@@ -11,7 +11,7 @@ import { VoiceButton } from "./voice-button";
 const EMPTY_ERROR = "Tulis transaksinya dulu.";
 const PENDING_TEXT = "Membaca transaksi…";
 
-/** Bilah input kalimat di bawah layar (design §10.4). Tidak menyimpan apa pun sendiri. */
+/** Kolom kalimat + mikrofon (design §10.4), di dalam layar "Tambah transaksi". Tidak menyimpan apa pun sendiri. */
 export function AiTextInput({
   value,
   onValueChange,
@@ -22,6 +22,8 @@ export function AiTextInput({
   onValueChange: (value: string) => void;
   onSubmit: (text: string) => void;
   pending: boolean;
+  /** Dipertahankan untuk kompatibilitas pemanggil; kolom selalu inline sejak redesain. */
+  variant?: "inline";
 }) {
   const [error, setError] = useState(false);
 
@@ -41,9 +43,8 @@ export function AiTextInput({
       aria-label="Catat transaksi dengan kalimat"
       noValidate
       onSubmit={handleSubmit}
-      className="fixed inset-x-0 bottom-0 z-20 border-t bg-background/95 px-4 pt-3 pb-[max(0.75rem,env(safe-area-inset-bottom))] backdrop-blur"
     >
-      <div className="mx-auto flex max-w-5xl gap-2">
+      <div className="flex gap-2">
         <Label htmlFor="ai-text" className="sr-only">
           Ketik transaksi
         </Label>
@@ -61,7 +62,7 @@ export function AiTextInput({
           placeholder="Ketik transaksi… mis. makan siang 25rb"
           aria-invalid={error || undefined}
           aria-describedby={error ? "ai-text-error" : undefined}
-          className="min-h-11 flex-1"
+          className="min-h-11 flex-1 rounded-full px-4"
         />
         {/* Teks hasil suara langsung dikirim seperti ketikan, lalu tampil di kartu konfirmasi (FR 6). */}
         <VoiceButton
@@ -71,18 +72,18 @@ export function AiTextInput({
             onSubmit(text);
           }}
         />
-        <Button type="submit" aria-label="Kirim" disabled={pending} aria-busy={pending} className="size-11 shrink-0">
+        <Button type="submit" aria-label="Kirim" disabled={pending} aria-busy={pending} className="size-11 shrink-0 rounded-full">
           <SendHorizontal aria-hidden="true" />
         </Button>
       </div>
-      <div className="mx-auto max-w-5xl text-sm">
+      <div className="text-sm">
         {error && (
           <p id="ai-text-error" className="pt-1 text-destructive">
             {EMPTY_ERROR}
           </p>
         )}
         {/* Region live selalu ada supaya perubahan isinya diumumkan pembaca layar. */}
-        <p aria-live="polite" className="sr-only">
+        <p id="ai-text-status" aria-live="polite" className="sr-only">
           {pending ? PENDING_TEXT : ""}
         </p>
         {pending && (

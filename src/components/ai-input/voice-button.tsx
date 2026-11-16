@@ -14,7 +14,8 @@ const NETWORK_ERROR = "Gagal mengirim rekaman. Silakan ketik.";
 
 /**
  * Tombol rekam (FR 6): rekam ≤ 30 dtk → /api/ai/transcribe → `onText(teks)`. Teksnya lalu diproses
- * seperti ketikan biasa, jadi tetap lewat kartu konfirmasi. Saat offline tombol tidak tampil (arsitektur §7.4).
+ * seperti ketikan biasa, jadi tetap lewat kartu konfirmasi. Tombol selalu tampil supaya fiturnya
+ * terlihat; bila suara mati/offline/browser tidak mendukung, menekannya memberi penjelasan (FR 7).
  */
 export function VoiceButton({ onText, disabled }: { onText: (text: string) => void; disabled?: boolean }) {
   const enabled = useContext(VoiceEnabled);
@@ -27,7 +28,14 @@ export function VoiceButton({ onText, disabled }: { onText: (text: string) => vo
 
   useEffect(() => () => stop(true), []);
 
-  if (!enabled || typeof window === "undefined" || !("MediaRecorder" in window) || !online) return null;
+  function unavailableReason(): string | null {
+    if (!online) return "Input suara butuh internet. Silakan ketik.";
+    if (!enabled) return "Input suara belum tersedia. Silakan ketik transaksinya.";
+    if (typeof window === "undefined" || !("MediaRecorder" in window) || !navigator.mediaDevices) {
+      return "Browser ini belum mendukung rekam suara. Silakan ketik.";
+    }
+    return null;
+  }
 
   function stop(discard = false) {
     if (timer.current) clearInterval(timer.current);
@@ -87,13 +95,18 @@ export function VoiceButton({ onText, disabled }: { onText: (text: string) => vo
     <>
       <Button
         type="button"
-        variant={recording ? "destructive" : "outline"}
+        variant={recording ? "destructive" : "secondary"}
         aria-label={recording ? `Berhenti merekam (${seconds} detik)` : "Rekam suara"}
         aria-pressed={recording}
         disabled={disabled || state === "sending"}
         aria-busy={state === "sending"}
-        onClick={() => (recording ? stop() : void start())}
-        className="size-11 shrink-0"
+        onClick={() => {
+          if (recording) return stop();
+          const reason = unavailableReason();
+          if (reason) toast.info(reason);
+          else void start();
+        }}
+        className="size-11 shrink-0 rounded-full"
       >
         {recording ? <SquareIcon aria-hidden="true" /> : <MicIcon aria-hidden="true" />}
       </Button>

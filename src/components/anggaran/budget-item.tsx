@@ -37,7 +37,7 @@ export function BudgetItem({ budget }: { budget: BudgetView }) {
   const href = `/transaksi?${new URLSearchParams({ type: "expense", categoryId: budget.categoryId, from: budget.from, to: budget.to })}`;
 
   return (
-    <li className="flex flex-col gap-3 rounded-lg border p-4" aria-busy={pending}>
+    <li className="flex flex-col gap-3 rounded-2xl bg-card shadow-sm ring-1 ring-border p-4" aria-busy={pending}>
       <div className="flex items-center gap-2">
         <span aria-hidden className="size-2.5 shrink-0 rounded-full" style={{ backgroundColor: budget.color ?? "#64748B" }} />
         {budget.icon && <span aria-hidden>{budget.icon}</span>}

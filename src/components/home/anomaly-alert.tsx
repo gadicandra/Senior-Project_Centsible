@@ -16,7 +16,7 @@ export function AnomalyAlert({ anomalies }: { anomalies: AnomalyView[] }) {
   return (
     <section
       aria-labelledby="anomaly-title"
-      className="flex flex-col gap-2 rounded-lg border border-amber-700/40 bg-amber-50 p-4 dark:border-amber-400/40 dark:bg-amber-950/40"
+      className="flex flex-col gap-2 rounded-2xl border border-amber-700/30 bg-amber-50 p-4 dark:border-amber-400/40 dark:bg-amber-950/40"
     >
       <h2 id="anomaly-title" className="flex items-center gap-1.5 font-semibold text-amber-800 dark:text-amber-300">
         <TriangleAlertIcon className="size-4 shrink-0" aria-hidden />

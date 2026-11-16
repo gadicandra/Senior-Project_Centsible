@@ -10,16 +10,12 @@ afterEach(() => {
 });
 
 // Base UI hanya mencatat peringatan ini sekali per proses, jadi tes ini harus merender paling awal.
-test("HomeScreen merender Lihat transaksi sebagai tautan tanpa peringatan nativeButton", () => {
+test("HomeScreen: tautan ke transaksi & ringkasan berupa tautan sungguhan, tanpa peringatan nativeButton", () => {
   const error = vi.spyOn(console, "error").mockImplementation(() => {});
   try {
-    render(<HomeScreen displayName="Adi" wallets={[]} categories={[]} today="2026-09-23" budgets={null} />);
+    render(<HomeScreen displayName="Adi" wallets={[]} today="2026-09-23" budgets={null} />);
     expect(screen.getByRole("link", { name: "Lihat transaksi" }).getAttribute("href")).toBe("/transaksi");
     expect(screen.getByRole("link", { name: "Lihat ringkasan" }).getAttribute("href")).toBe("/ringkasan");
-    // Varian outline harus bergaris tepi: cn() membuang border-transparent dari kelas dasar.
-    const outline = screen.getByRole("link", { name: "Lihat ringkasan" }).className.split(/\s+/);
-    expect(outline).toContain("border-border");
-    expect(outline).not.toContain("border-transparent");
     expect(error.mock.calls.some((args) => args.some((a) => String(a).includes("nativeButton")))).toBe(false);
   } finally {
     error.mockRestore();
@@ -34,26 +30,25 @@ test("HomeScreen menyapa pengguna dan menjumlah saldo dompet", () => {
         { id: "1", name: "Tunai", balance: 50_000, isDefault: true, isArchived: false },
         { id: "2", name: "BCA", balance: 1_200_000, isDefault: false, isArchived: false },
       ]}
-      categories={[{ id: "c", name: "Makan", kind: "expense", icon: null, isArchived: false }]}
-      today="2026-09-23"
+            today="2026-09-23"
       budgets={null}
     />,
   );
-  expect(screen.getByRole("heading", { level: 1, name: "Halo, Adi" })).toBeDefined();
-  expect(screen.getByText(/1\.250\.000/)).toBeDefined();
-  expect(screen.getByLabelText("Ketik transaksi")).toBeDefined();
+  expect(screen.getByText("Halo, Adi")).toBeDefined();
+  expect(screen.getByRole("heading", { level: 1, name: "Pengeluaran bulan ini" })).toBeDefined();
+  expect(screen.getByText(/Saldo semua dompet Rp\s1\.250\.000/)).toBeDefined();
 });
 
 describe("kartu Anggaran di Beranda", () => {
   const home = (budgets: Parameters<typeof HomeScreen>[0]["budgets"]) =>
-    render(<HomeScreen displayName="Adi" wallets={[]} categories={[]} today="2026-10-15" budgets={budgets} />);
+    render(<HomeScreen displayName="Adi" wallets={[]} today="2026-10-15" budgets={budgets} />);
   const week = { from: "2026-10-12", to: "2026-10-18" };
   const month = { from: "2026-10-01", to: "2026-10-31" };
 
   test("gagal dimuat: Beranda tetap tampil", () => {
     home(null);
     expect(screen.getByText("Anggaran tidak bisa dimuat saat ini.")).toBeDefined();
-    expect(screen.getByLabelText("Ketik transaksi")).toBeDefined();
+    expect(screen.getByRole("heading", { level: 1, name: "Pengeluaran bulan ini" })).toBeDefined();
   });
 
   test("kosong: tautan Atur anggaran", () => {
@@ -88,7 +83,7 @@ describe("peringatan pengeluaran tidak biasa (FR 14)", () => {
       <HomeScreen
         displayName="Adi"
         wallets={[]}
-        categories={[]}
+       
         today="2026-10-15"
         budgets={null}
         anomalies={[
@@ -107,18 +102,18 @@ describe("peringatan pengeluaran tidak biasa (FR 14)", () => {
   });
 
   test("tanpa anomali: kartu tidak tampil", () => {
-    render(<HomeScreen displayName="Adi" wallets={[]} categories={[]} today="2026-10-15" budgets={null} anomalies={[]} />);
+    render(<HomeScreen displayName="Adi" wallets={[]} today="2026-10-15" budgets={null} anomalies={[]} />);
     expect(screen.queryByRole("heading", { name: "Pengeluaran tidak biasa" })).toBeNull();
   });
 });
 
 test("kartu ringkasan minggu lalu (FR 13) tampil bila ada; tidak tampil bila belum ada", () => {
   const { rerender } = render(
-    <HomeScreen displayName="Adi" wallets={[]} categories={[]} today="2026-11-16" budgets={null}
+    <HomeScreen displayName="Adi" wallets={[]} today="2026-11-16" budgets={null}
       weekly={{ id: "i1", content: "Minggu lalu hemat. Saran: pasang anggaran Makan.", periodStart: "2026-11-09", periodEnd: "2026-11-15", isRead: false }} />,
   );
   expect(screen.getByRole("heading", { name: /Ringkasan minggu lalu.*9 Nov – 15 Nov/ })).toBeDefined();
   expect(screen.getByText(/Saran: pasang anggaran Makan/)).toBeDefined();
-  rerender(<HomeScreen displayName="Adi" wallets={[]} categories={[]} today="2026-11-16" budgets={null} weekly={null} />);
+  rerender(<HomeScreen displayName="Adi" wallets={[]} today="2026-11-16" budgets={null} weekly={null} />);
   expect(screen.queryByRole("heading", { name: /Ringkasan minggu lalu/ })).toBeNull();
 });
