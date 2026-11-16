@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { AI_TEXT_UI_MAX_CHARS } from "@/lib/ai/limits";
+import { VoiceButton } from "./voice-button";
 
 const EMPTY_ERROR = "Tulis transaksinya dulu.";
 const PENDING_TEXT = "Membaca transaksi…";
@@ -61,6 +62,14 @@ export function AiTextInput({
           aria-invalid={error || undefined}
           aria-describedby={error ? "ai-text-error" : undefined}
           className="min-h-11 flex-1"
+        />
+        {/* Teks hasil suara langsung dikirim seperti ketikan, lalu tampil di kartu konfirmasi (FR 6). */}
+        <VoiceButton
+          disabled={pending}
+          onText={(text) => {
+            onValueChange(text);
+            onSubmit(text);
+          }}
         />
         <Button type="submit" aria-label="Kirim" disabled={pending} aria-busy={pending} className="size-11 shrink-0">
           <SendHorizontal aria-hidden="true" />
