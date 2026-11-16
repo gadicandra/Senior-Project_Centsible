@@ -1,0 +1,99 @@
+{"text":"makan pagi nasi uduk 12rb","amount":12000,"type":"expense","category":"Makan"}
+{"text":"beli es teh goceng","amount":5000,"type":"expense","category":"Makan"}
+{"text":"makan malem bareng temen 45 ribu","amount":45000,"type":"expense","category":"Makan"}
+{"text":"jajan cilok ceban","amount":10000,"type":"expense","category":"Makan"}
+{"text":"kopi susu gula aren 22k","amount":22000,"type":"expense","category":"Makan"}
+{"text":"pesen gofood ayam geprek 31.500","amount":31500,"type":"expense","category":"Makan"}
+{"text":"belanja indomaret buat sarapan 27rb","amount":27000,"type":"expense","category":"Makan"}
+{"text":"warmindo indomie telor 13 ribu","amount":13000,"type":"expense","category":"Makan"}
+{"text":"traktir temen ultah gocap","amount":50000,"type":"expense","category":"Makan"}
+{"text":"makan siang di kantin teknik 15000","amount":15000,"type":"expense","category":"Makan"}
+{"text":"beli roti sama susu 18rb","amount":18000,"type":"expense","category":"Makan"}
+{"text":"mie ayam 2 porsi 30rb","amount":30000,"type":"expense","category":"Makan"}
+{"text":"galon air minum 20rb","amount":20000,"type":"expense","category":"Makan"}
+{"text":"seblak level 3 17rb","amount":17000,"type":"expense","category":"Makan"}
+{"text":"martabak manis 35k","amount":35000,"type":"expense","category":"Makan"}
+{"text":"ngopi di kafe 40rb","amount":40000,"type":"expense","category":"Makan"}
+{"text":"beli buah di pasar 25.000","amount":25000,"type":"expense","category":"Makan"}
+{"text":"sate padang 28 rb","amount":28000,"type":"expense","category":"Makan"}
+{"text":"belanja bulanan beras minyak telur 150rb","amount":150000,"type":"expense","category":"Makan"}
+{"text":"jus alpukat 12k","amount":12000,"type":"expense","category":"Makan"}
+{"text":"isi bensin motor 30rb","amount":30000,"type":"expense","category":"Transport"}
+{"text":"ojol ke kampus 14rb","amount":14000,"type":"expense","category":"Transport"}
+{"text":"grab pulang malem 23.500","amount":23500,"type":"expense","category":"Transport"}
+{"text":"parkir motor seceng","amount":1000,"type":"expense","category":"Transport"}
+{"text":"tiket kereta prameks 8rb","amount":8000,"type":"expense","category":"Transport"}
+{"text":"servis motor ganti oli 65rb","amount":65000,"type":"expense","category":"Transport"}
+{"text":"gojek ke stasiun 2 ceban","amount":20000,"type":"expense","category":"Transport"}
+{"text":"tiket bus pulang kampung 120rb","amount":120000,"type":"expense","category":"Transport"}
+{"text":"tambal ban 15 ribu","amount":15000,"type":"expense","category":"Transport"}
+{"text":"bensin full tank 45k","amount":45000,"type":"expense","category":"Transport"}
+{"text":"trans jogja 3600","amount":3600,"type":"expense","category":"Transport"}
+{"text":"tiket pesawat mudik 1,2jt","amount":1200000,"type":"expense","category":"Transport"}
+{"text":"bayar kos bulan ini 900rb","amount":900000,"type":"expense","category":"Kos"}
+{"text":"listrik token kos 100rb","amount":100000,"type":"expense","category":"Kos"}
+{"text":"bayar wifi kos 50 ribu","amount":50000,"type":"expense","category":"Kos"}
+{"text":"sewa kamar 1jt","amount":1000000,"type":"expense","category":"Kos"}
+{"text":"iuran kebersihan kos goceng","amount":5000,"type":"expense","category":"Kos"}
+{"text":"laundry kiloan 24rb","amount":24000,"type":"expense","category":"Kos"}
+{"text":"beli sabun sampo odol 35rb","amount":35000,"type":"expense","category":"Kos"}
+{"text":"perpanjang kontrakan 1,5 juta","amount":1500000,"type":"expense","category":"Kos"}
+{"text":"fotokopi materi kuliah 6rb","amount":6000,"type":"expense","category":"Kuliah"}
+{"text":"print tugas akhir 25 ribu","amount":25000,"type":"expense","category":"Kuliah"}
+{"text":"beli buku kalkulus 85rb","amount":85000,"type":"expense","category":"Kuliah"}
+{"text":"bayar UKT semester ini 2,4jt","amount":2400000,"type":"expense","category":"Kuliah"}
+{"text":"jilid laporan praktikum ceban","amount":10000,"type":"expense","category":"Kuliah"}
+{"text":"langganan zoom buat kelompok 75rb","amount":75000,"type":"expense","category":"Kuliah"}
+{"text":"beli pulpen sama binder 18k","amount":18000,"type":"expense","category":"Kuliah"}
+{"text":"daftar seminar nasional 50rb","amount":50000,"type":"expense","category":"Kuliah"}
+{"text":"kuota internet buat kuliah online 60rb","amount":60000,"type":"expense","category":"Kuliah"}
+{"text":"iuran kas kelas goceng","amount":5000,"type":"expense","category":"Kuliah"}
+{"text":"nonton film di xxi 50rb","amount":50000,"type":"expense","category":"Hiburan"}
+{"text":"langganan spotify 55rb","amount":55000,"type":"expense","category":"Hiburan"}
+{"text":"top up game 100rb","amount":100000,"type":"expense","category":"Hiburan"}
+{"text":"tiket konser 350k","amount":350000,"type":"expense","category":"Hiburan"}
+{"text":"karaoke bareng anak kos 3 ceban","amount":30000,"type":"expense","category":"Hiburan"}
+{"text":"netflix bulanan 65 ribu","amount":65000,"type":"expense","category":"Hiburan"}
+{"text":"main futsal patungan 20rb","amount":20000,"type":"expense","category":"Hiburan"}
+{"text":"beli komik 40rb","amount":40000,"type":"expense","category":"Hiburan"}
+{"text":"tiket masuk pantai 15rb","amount":15000,"type":"expense","category":"Hiburan"}
+{"text":"nge-gym bulanan 150rb","amount":150000,"type":"expense","category":"Hiburan"}
+{"text":"beli obat flu di apotek 23rb","amount":23000,"type":"expense","category":"Kesehatan"}
+{"text":"periksa ke dokter 75rb","amount":75000,"type":"expense","category":"Kesehatan"}
+{"text":"vitamin c 30k","amount":30000,"type":"expense","category":"Kesehatan"}
+{"text":"masker sama hand sanitizer 25rb","amount":25000,"type":"expense","category":"Kesehatan"}
+{"text":"cabut gigi 250rb","amount":250000,"type":"expense","category":"Kesehatan"}
+{"text":"obat maag 12 ribu","amount":12000,"type":"expense","category":"Kesehatan"}
+{"text":"beli kacamata 450k","amount":450000,"type":"expense","category":"Kesehatan"}
+{"text":"potong rambut 25rb","amount":25000,"type":"expense","category":"Lain-lain"}
+{"text":"kado ulang tahun pacar 200rb","amount":200000,"type":"expense","category":"Lain-lain"}
+{"text":"sumbangan masjid ceban","amount":10000,"type":"expense","category":"Lain-lain"}
+{"text":"beli pulsa 25rb","amount":25000,"type":"expense","category":"Lain-lain"}
+{"text":"admin bank 6.500","amount":6500,"type":"expense","category":"Lain-lain"}
+{"text":"beli kaos baru 90rb","amount":90000,"type":"expense","category":"Lain-lain"}
+{"text":"kirim paket ke rumah 18rb","amount":18000,"type":"expense","category":"Lain-lain"}
+{"text":"dapet kiriman dari ortu 2jt","amount":2000000,"type":"income","category":"Uang Saku"}
+{"text":"uang jajan mingguan dari ibu 300rb","amount":300000,"type":"income","category":"Uang Saku"}
+{"text":"transferan bapak 1,5jt","amount":1500000,"type":"income","category":"Uang Saku"}
+{"text":"dikasih tante 500 ribu","amount":500000,"type":"income","category":"Uang Saku"}
+{"text":"uang saku bulan ini 2,5 juta","amount":2500000,"type":"income","category":"Uang Saku"}
+{"text":"dapet beasiswa 3jt","amount":3000000,"type":"income","category":"Lain-lain"}
+{"text":"bayaran desain logo 750rb","amount":750000,"type":"income","category":"Freelance"}
+{"text":"fee ngajar les privat 200k","amount":200000,"type":"income","category":"Freelance"}
+{"text":"honor asisten praktikum 600rb","amount":600000,"type":"income","category":"Freelance"}
+{"text":"project website klien 2jt","amount":2000000,"type":"income","category":"Freelance"}
+{"text":"jualan stiker laku 150rb","amount":150000,"type":"income","category":"Freelance"}
+{"text":"dibayar jadi panitia 300 ribu","amount":300000,"type":"income","category":"Freelance"}
+{"text":"temen balikin utang 50rb","amount":50000,"type":"income","category":"Lain-lain"}
+{"text":"menang lomba 1jt","amount":1000000,"type":"income","category":"Lain-lain"}
+{"text":"refund tiket 120rb","amount":120000,"type":"income","category":"Lain-lain"}
+{"text":"cashback gopay 7.500","amount":7500,"type":"income","category":"Lain-lain"}
+{"text":"jual buku bekas 60rb","amount":60000,"type":"income","category":"Lain-lain"}
+{"text":"bensin 2 gocap kemarin","amount":100000,"type":"expense","category":"Transport"}
+{"text":"tadi pagi beli sarapan 3 goceng","amount":15000,"type":"expense","category":"Makan"}
+{"text":"semalem gofood 41rb","amount":41000,"type":"expense","category":"Makan"}
+{"text":"kemarin lusa bayar wifi 300k","amount":300000,"type":"expense","category":"Kos"}
+{"text":"senin kemarin fotokopi 4.500","amount":4500,"type":"expense","category":"Kuliah"}
+{"text":"minggu lalu beli sepatu futsal 275rb","amount":275000,"type":"expense","category":"Hiburan"}
+{"text":"kemaren dapet transfer ortu sejuta","amount":1000000,"type":"income","category":"Uang Saku"}
+{"text":"ojek online pulang dari mall 1 ceban 5 ribu","amount":15000,"type":"expense","category":"Transport"}
