@@ -18,15 +18,16 @@ export function BottomNav({ onAdd }: { onAdd: () => void }) {
       aria-label="Navigasi utama"
       className="fixed inset-x-0 bottom-0 z-30 border-t bg-card/95 pb-[env(safe-area-inset-bottom)] backdrop-blur md:hidden"
     >
-      <ul className="mx-auto grid max-w-md grid-cols-5 items-end px-2">
+      <ul className="mx-auto grid h-16 max-w-md grid-cols-5 items-center px-2">
         {ITEMS.map((item) =>
           item === null ? (
-            <li key="add" className="flex justify-center">
+            // Tombol setengah menonjol di atas bilah (referensi): diangkat absolut dari tengah slot.
+            <li key="add" className="relative flex h-full justify-center">
               <button
                 type="button"
                 onClick={onAdd}
                 aria-label="Tambah transaksi"
-                className="-mt-6 flex size-14 items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background transition-transform active:scale-95"
+                className="absolute -top-7 flex size-14 cursor-pointer items-center justify-center rounded-full bg-primary text-primary-foreground shadow-lg shadow-primary/30 ring-4 ring-background transition-transform hover:bg-primary/90 active:scale-95"
               >
                 <PlusIcon className="size-7" aria-hidden />
               </button>

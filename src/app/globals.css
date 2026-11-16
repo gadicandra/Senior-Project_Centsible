@@ -138,4 +138,14 @@
   html {
     @apply font-sans;
   }
+  /* Tailwind 4 tidak lagi memberi cursor:pointer pada tombol; kembalikan untuk semua yang bisa diklik. */
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  [role="radio"],
+  summary,
+  select,
+  input[type="date"],
+  input[type="color"] {
+    cursor: pointer;
+  }
 }
