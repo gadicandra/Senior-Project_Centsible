@@ -53,9 +53,10 @@ jobs:
         if: steps.probe.outputs.ready == 'true'
         run: pnpm typecheck
 
-      - name: Test
+      # Tes + cakupan sekaligus; gagal kalau cakupan turun di bawah batas di vitest.config.mts (#35).
+      - name: Test & coverage
         if: steps.probe.outputs.ready == 'true'
-        run: pnpm test
+        run: pnpm test:coverage
 
       - name: Build
         if: steps.probe.outputs.ready == 'true'

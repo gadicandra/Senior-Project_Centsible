@@ -14,5 +14,14 @@ export default defineConfig({
   test: {
     environment: "jsdom",
     include: ["src/**/*.test.{ts,tsx}"],
+    // `pnpm test:coverage` (dijalankan CI, Issue #35). Batas = cakupan saat ini dibulatkan ke bawah, supaya CI
+    // gagal kalau cakupan turun. Naikkan pelan-pelan saat tes bertambah, bukan sebaliknya.
+    coverage: {
+      provider: "v8",
+      include: ["src/**/*.{ts,tsx}"],
+      exclude: ["src/generated/**", "src/components/ui/**", "**/*.test.{ts,tsx}"],
+      reporter: ["text-summary", "html"],
+      thresholds: { lines: 75, statements: 75, branches: 68, functions: 65 },
+    },
   },
 });
