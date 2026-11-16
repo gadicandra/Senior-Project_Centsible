@@ -111,3 +111,14 @@ describe("peringatan pengeluaran tidak biasa (FR 14)", () => {
     expect(screen.queryByRole("heading", { name: "Pengeluaran tidak biasa" })).toBeNull();
   });
 });
+
+test("kartu ringkasan minggu lalu (FR 13) tampil bila ada; tidak tampil bila belum ada", () => {
+  const { rerender } = render(
+    <HomeScreen displayName="Adi" wallets={[]} categories={[]} today="2026-11-16" budgets={null}
+      weekly={{ id: "i1", content: "Minggu lalu hemat. Saran: pasang anggaran Makan.", periodStart: "2026-11-09", periodEnd: "2026-11-15", isRead: false }} />,
+  );
+  expect(screen.getByRole("heading", { name: /Ringkasan minggu lalu.*9 Nov – 15 Nov/ })).toBeDefined();
+  expect(screen.getByText(/Saran: pasang anggaran Makan/)).toBeDefined();
+  rerender(<HomeScreen displayName="Adi" wallets={[]} categories={[]} today="2026-11-16" budgets={null} weekly={null} />);
+  expect(screen.queryByRole("heading", { name: /Ringkasan minggu lalu/ })).toBeNull();
+});
