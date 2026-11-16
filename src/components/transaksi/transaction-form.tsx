@@ -8,7 +8,9 @@ import { FormSelect } from "@/components/form/form-select";
 import { SubmitButton } from "@/components/form/submit-button";
 import { Button } from "@/components/ui/button";
 import { FieldGroup } from "@/components/ui/field";
-import { initialFormState } from "@/lib/form-state";
+import { useIsOnline, useOutboxUser } from "@/components/offline/offline-sync";
+import { formValues, initialFormState, type FormState } from "@/lib/form-state";
+import { enqueue } from "@/lib/outbox";
 import { ENTRY_KIND_LABEL, ENTRY_KINDS } from "@/lib/schemas/settings";
 import { cn } from "@/lib/utils";
 import { saveTransaction } from "@/server/actions/transactions";
@@ -44,7 +46,22 @@ export function TransactionForm({
   today: string;
   onDone: () => void;
 }) {
-  const [state, action] = useActionState(saveTransaction, initialFormState);
+  const online = useIsOnline();
+  const userId = useOutboxUser();
+  const [state, action] = useActionState(async (prev: FormState, fd: FormData): Promise<FormState> => {
+    // Offline (FR 16): transaksi baru masuk antrean perangkat; validasi penuh terjadi di /api/sync.
+    // Mengubah transaksi lama butuh data server terbaru, jadi tidak diantrekan.
+    if (!navigator.onLine && userId) {
+      if (transaction) return { ok: false, message: "Mengubah transaksi butuh internet. Coba lagi saat online.", values: formValues(fd) };
+      try {
+        enqueue(userId, formValues(fd));
+      } catch {
+        return { ok: false, message: "Penyimpanan perangkat penuh atau diblokir. Transaksi belum tersimpan.", values: formValues(fd) };
+      }
+      return { ok: true, message: "Offline: transaksi disimpan di perangkat dan akan dikirim saat online." };
+    }
+    return saveTransaction(prev, fd);
+  }, initialFormState);
   const prefill = transaction ? undefined : prefillProp;
   const [type, setType] = useState<EntryKind>(
     (state.values?.type as EntryKind) ?? transaction?.type ?? prefill?.type ?? "expense",
@@ -125,7 +142,7 @@ export function TransactionForm({
           <Button type="button" variant="outline" onClick={onDone}>
             Batal
           </Button>
-          <SubmitButton>Simpan</SubmitButton>
+          <SubmitButton>{online || transaction ? "Simpan" : "Simpan offline"}</SubmitButton>
         </div>
       </FieldGroup>
     </form>
