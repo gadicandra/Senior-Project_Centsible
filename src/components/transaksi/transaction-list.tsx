@@ -39,7 +39,7 @@ export function TransactionList({ items, ...props }: Props & { items: Transactio
       {[...groups].map(([date, rows]) => (
         <section key={date} aria-label={formatDateOnly(date)}>
           <h3 className="mb-1.5 text-sm font-medium text-muted-foreground">{formatDateOnly(date)}</h3>
-          <ul className="divide-y rounded-lg border">
+          <ul className="divide-y rounded-2xl bg-card shadow-sm ring-1 ring-border overflow-hidden">
             {rows.map((t) => (
               <TransactionItem key={t.id} transaction={t} {...props} />
             ))}
