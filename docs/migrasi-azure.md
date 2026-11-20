@@ -23,6 +23,7 @@ Tutorial ini menyalakan **AI baca transaksi (parse)**, **suara ke teks (STT)**, 
 9. [Biaya & batas pemakaian](#9-biaya--batas-pemakaian)
 10. [Masalah umum](#10-masalah-umum)
 11. [Rollback](#11-rollback)
+12. [Verifikasi terhadap dokumentasi](#12-verifikasi-terhadap-dokumentasi)
 
 ---
 
@@ -73,6 +74,10 @@ Browser ─► Vercel (Next.js) ─► Supabase         Browser ─► Container
    - **Region:** pilih region yang **menyediakan model chat DAN model transkripsi sekaligus** (bagian 4–5).
 
      > Cara mengecek: di Foundry buka **Model catalog**, cari `whisper` (atau `gpt-4o-mini-transcribe`), klik **Deploy**. Dialognya menampilkan region dan tipe deployment yang tersedia untuk resource kamu. Kalau region pilihanmu tidak muncul, buat resource di region lain. Ketersediaan region berubah-ubah, jadi selalu cek di portal, jangan dari tutorial ini.
+     >
+     > Atau lewat CLI: `az cognitiveservices model list -l japaneast --output table`.
+     >
+     > Patokan per 20 Nov 2026 (dokumentasi Microsoft): deployment **Standard (regional)** di Asia Pasifik untuk `gpt-4.1-mini` dan `gpt-4o` tersedia di `japaneast`, tetapi **`whisper` Standard hanya di `southindia`**. Deployment **Global Standard** tidak terikat region resource (data bisa diproses di region Azure mana pun), jadi untuk uji coba pilih Global Standard bila tersedia.
 
      Latensi dari Tokyo ke region lain hanya ±100–200 ms per panggilan AI, masih jauh di bawah batas waktu 8 detik.
 3. Setelah jadi, buka resource → **Keys and Endpoint**. Catat:
@@ -99,15 +104,22 @@ AI Parse mengubah kalimat seperti *"beli bensin gocap kemarin"* menjadi JSON. Ri
 
    | Model | Cocok? | Alasan |
    |---|---|---|
-   | `gpt-4o-mini` | ✅ **disarankan** | Murah, cepat, mendukung *structured outputs* (`json_schema`), `temperature`, `max_tokens` |
-   | `gpt-4.1-mini` / `gpt-4.1-nano` | ✅ | Sama-sama didukung, coba kalau akurasi kurang atau ingin lebih murah |
-   | `o1`/`o3`/`o4-mini`, `gpt-5*` (model *reasoning*) | ❌ | Tidak menerima `max_tokens`/`temperature` dan lebih lambat. Kode memakai keduanya |
+   | `gpt-4.1-mini` (2025-04-14) | ✅ **disarankan** | Mendukung *structured outputs* (`json_schema`), `temperature`, `max_tokens`; tersedia Standard di `japaneast` |
+   | `gpt-4o-mini` (2024-07-18) | ✅ | Paling murah. Didukung kode tanpa perubahan |
+   | `gpt-5-mini`, `gpt-5.4-mini`/`nano`, `o*` (model *reasoning*) | ⚠️ perlu ubah kode | Chat Completions untuk model reasoning wajib `max_completion_tokens` (bukan `max_tokens`) dan **menolak** `temperature`. Lihat catatan di bawah |
+
+   > **Jadwal pensiun:** `gpt-4o-mini 2024-07-18`, `gpt-4o` dan `gpt-4.1-mini 2025-04-14` dijadwalkan pensiun **14 April 2027**, dan sebagian halaman Microsoft sudah menandai keluarga GPT-4 sebagai *deprecated*. Cukup untuk uji coba Fase 2, tapi sebelum April 2027 harus pindah ke keluarga GPT-5.
+   >
+   > **Kalau harus memakai GPT-5 (reasoning):** ubah dua tempat — `src/server/ai/providers/openai-compatible.ts` dan `src/server/ai/weekly.ts`: ganti `max_tokens` → `max_completion_tokens`, hapus `temperature`, dan untuk `gpt-5.1`+ (termasuk `gpt-5.4-mini`) tambahkan `reasoning_effort: "none"` supaya cepat (model sebelum 5.1, mis. `gpt-5-mini`, default `medium` dan tidak menerima `none`; pakai `"minimal"`). Naikkan `max_completion_tokens` (mis. 2000) karena token *reasoning* ikut dihitung. Setelah itu jalankan ulang `pnpm eval:ai`.
+   >
+   > Azure hanya mendukung **sebagian** JSON Schema untuk *structured outputs*. Skema Centsible sederhana (objek, enum, string, number, nullable) dan masuk subset itu; kalau Azure menolak skema, kode otomatis jatuh ke mode tanpa skema lalu memvalidasi dengan zod.
 
 3. **Cek cepat** dari terminal (ganti `<KEY>`):
    ```bash
    curl https://centsible-ai.openai.azure.com/openai/v1/chat/completions \
      -H "Content-Type: application/json" -H "api-key: <KEY>" \
      -d '{"model":"parse","messages":[{"role":"user","content":"Balas: ok"}],"max_tokens":5}'
+   # model reasoning: ganti "max_tokens":5 dengan "max_completion_tokens":200
    ```
    Kalau berhasil, keluar JSON berisi `"content":"ok"`.
 
@@ -119,7 +131,8 @@ STT mengubah rekaman suara menjadi teks, lalu teks itu diproses AI Parse.
 
 1. Foundry → **Model catalog** → cari **`whisper`** → **Deploy**.
    - **Deployment name:** `stt` (dipakai sebagai `AI_STT_MODEL`)
-   - **Alternatif:** `gpt-4o-mini-transcribe`, biasanya lebih akurat untuk bahasa campuran. Pastikan endpoint `/audio/transcriptions`-nya menerima parameter `language` dan `prompt` (cek di halaman modelnya).
+   - **Region:** `whisper` versi `001` Standard di Asia Pasifik hanya ada di `southindia`. Kalau resource kamu di `japaneast`, pilih **Global Standard** bila muncul, atau pakai model alternatif di bawah.
+   - **Alternatif:** `gpt-4o-mini-transcribe` (murah) atau `gpt-4o-transcribe` (paling akurat). Keduanya memakai endpoint `/audio/transcriptions` yang sama dan menerima `language`, `prompt`, `response_format: "json"`, jadi kode tidak berubah.
 2. **Cek cepat** dengan rekaman apa saja (`.wav`, `.webm`, `.mp3`, maksimal 25 MB):
    ```bash
    curl https://centsible-ai.openai.azure.com/openai/v1/audio/transcriptions \
@@ -131,7 +144,12 @@ STT mengubah rekaman suara menjadi teks, lalu teks itu diproses AI Parse.
 
    > Butuh rekaman uji? Nyalakan Speaches lokal lalu pakai TTS-nya, atau rekam 5 detik dengan HP.
    >
-   > Kalau curl ini menjawab **404**, berarti region/deployment itu belum melayani audio lewat API v1. Coba deployment di region lain, atau kabari tim. Kode perlu penyesuaian kecil kalau harus memakai path lama (`/openai/deployments/stt/audio/transcriptions?api-version=…`).
+   > Kalau curl ini menjawab **404**, berarti region/deployment itu belum melayani audio lewat API v1. Coba deployment di region lain, atau kabari tim. Kode perlu penyesuaian kecil kalau harus memakai path lama per-deployment:
+   > ```bash
+   > curl "https://centsible-ai.openai.azure.com/openai/deployments/stt/audio/transcriptions?api-version=2024-02-01" \
+   >   -H "api-key: <KEY>" -F file=@rekaman.wav -F language=id
+   > ```
+   > Kalau hanya path ini yang jalan, kabari tim: `transcribe.ts` perlu klien `AzureOpenAI` (dengan `apiVersion` dan `deployment`).
 
 ---
 
@@ -165,7 +183,7 @@ pnpm dev                    # http://localhost:3000
    ```bash
    pnpm eval:ai
    ```
-   Target tetap **≥ 85%** nominal dan kategori. Hasil sebelumnya (Claude Haiku 4.5) 88,9%. Kalau gpt-4o-mini di bawah 85%, coba `gpt-4.1-mini`.
+   Target tetap **≥ 85%** nominal dan kategori. Hasil sebelumnya (Claude Haiku 4.5) 88,9%. Kalau di bawah 85%, coba model lain (mis. `gpt-4o-mini` ↔ `gpt-4.1-mini`).
 4. **Ringkasan mingguan versi AI** (butuh `CRON_SECRET` di `.env.local` dan ada transaksi minggu lalu):
    ```bash
    curl -H "Authorization: Bearer <CRON_SECRET>" http://localhost:3000/api/cron/weekly
@@ -317,6 +335,8 @@ az containerapp show -g $RG -n centsible --query properties.configuration.ingres
 >
 > Rahasia ditaruh di `--secrets`, lalu dirujuk dengan `secretref:`, jadi nilainya tidak tampil di konfigurasi. Versi yang lebih ketat memakai **Key Vault** + Managed Identity (`docs/arsitektur.md` §4).
 
+> `--registry-identity system` membuat *system-assigned managed identity* dan otomatis memberinya peran `AcrPull` ke ACR tersebut, jadi tidak perlu admin user/password registry. Ini hanya berlaku untuk Azure Container Registry.
+
 ### 8.4 Cron ringkasan mingguan (pengganti Vercel Cron)
 
 Job kecil yang memanggil endpoint yang sama dengan Vercel Cron. Cron Container Apps memakai **UTC**, jadi `0 23 * * 0` sama dengan Senin 06:00 WIB.
@@ -370,7 +390,9 @@ Angka di atas hanya perkiraan. Harga resmi ada di halaman *Azure OpenAI pricing*
 | Kalimat selalu jatuh ke form manual, log `ai_fallback` `code: "env"` | Env AI belum terbaca | Cek ejaan nama env, lalu **redeploy** |
 | Log `invalid_env` `AI_TEXT_BASE_URL` | URL bukan https atau salah format | Harus `https://…/openai/v1/` |
 | 404 `DeploymentNotFound` | `AI_TEXT_MODEL`/`AI_STT_MODEL` diisi nama model | Isi **nama deployment** (`parse`, `stt`) |
-| 400 soal `max_tokens` / `temperature` | Deployment memakai model *reasoning* (o-series/gpt-5) | Ganti ke `gpt-4o-mini` / `gpt-4.1-mini` |
+| 400 soal `max_tokens` / `temperature` (`unsupported_parameter`) | Deployment memakai model *reasoning* (o-series/gpt-5) | Ganti ke `gpt-4.1-mini` / `gpt-4o-mini`, atau ubah kode (bagian 4) |
+| 400 `invalid_schema` / soal `response_format` | Fitur JSON Schema di luar subset Azure | Kode otomatis fallback; kalau tetap gagal cek log `ai_fallback` |
+| STT 404 di `japaneast` | `whisper` Standard tidak ada di region itu | Global Standard, `gpt-4o-mini-transcribe`, atau resource di `southindia` |
 | 401 | Kunci salah, atau `AI_STT_API_KEY` kosong | Isi kunci Azure di kedua env kunci |
 | 429 | Kuota tokens-per-minute deployment habis | Naikkan rate limit deployment, atau tunggu 1 menit |
 | Mikrofon: "Input suara belum tersedia" | `AI_STT_ENABLED` bukan `true` atau env STT tidak valid | Cek ketiga env STT, lalu redeploy |
@@ -386,3 +408,25 @@ Angka di atas hanya perkiraan. Harga resmi ada di halaman *Azure OpenAI pricing*
 - **Tingkat B:** arahkan domain kembali ke Vercel, aktifkan lagi Vercel Cron, lalu matikan Container App (`az containerapp update --min-replicas 0 --max-replicas 0`) atau hapus resource group-nya.
 
 Data pengguna tetap di Supabase dan tidak ikut dipindah, jadi rollback tidak berisiko kehilangan data.
+
+---
+
+## 12. Verifikasi terhadap dokumentasi
+
+Dicek ulang ke dokumentasi Microsoft Learn dan OpenAI terbaru (lewat Context7) pada **20 November 2026**.
+
+| Klaim di tutorial | Status | Sumber |
+|---|---|---|
+| Base URL v1 `https://<resource>.openai.azure.com/openai/v1/`, `apiKey`, `model` = nama deployment, tanpa `api-version` | ✅ sesuai | Azure OpenAI — *API version lifecycle / v1 API* |
+| `.services.ai.azure.com/openai/v1/` juga diterima | ✅ sesuai | idem |
+| `POST /openai/v1/audio/transcriptions` dengan `file`, `model`, `language`, `prompt`, `response_format` | ✅ sesuai | REST reference *Azure OpenAI — audio* |
+| Path lama per-deployment untuk Whisper | ⚠️ ditambahkan | *Whisper quickstart* (`api-version=2024-02-01`) |
+| Model reasoning: `max_completion_tokens`, tanpa `temperature`; `reasoning_effort` `none` hanya untuk 5.1+ | ⚠️ diperjelas | *Reasoning models*, *Chat completions* |
+| `gpt-4o-mini` disarankan | ⚠️ diganti `gpt-4.1-mini`; keduanya pensiun 14 Apr 2027 | *Model retirements* |
+| Ketersediaan region (gpt-4.1-mini di japaneast; whisper Standard APAC hanya southindia) | ⚠️ ditambahkan | *Foundry Models region availability* |
+| Structured outputs `json_schema` (subset JSON Schema) | ✅ sesuai, catatan subset ditambahkan | *Structured outputs* |
+| `az containerapp create --registry-identity system` (AcrPull otomatis), `--secrets` + `secretref:` | ✅ sesuai | *Container Apps — managed identity image pull*, *Manage secrets* |
+| Container Apps job `--trigger-type Schedule`, cron dievaluasi dalam **UTC** | ✅ sesuai | *Jobs in Azure Container Apps* |
+| `az acr build --registry --image --build-arg` | ✅ sesuai | *ACR Tasks quickstart* |
+
+Ketersediaan model, region, dan tanggal pensiun bisa berubah. Sebelum migrasi, cek ulang halaman *Model retirements* dan `az cognitiveservices model list`.
