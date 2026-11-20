@@ -255,7 +255,7 @@ curl http://localhost:8000/v1/audio/transcriptions \
 
 **Hasil uji (16 Nov 2026, `faster-whisper-small`, CPU):** 3 dari 4 kalimat benar sepenuhnya dan nominal benar di keempatnya. Waktu dari suara sampai kartu ±5 detik.
 
-> **Kenapa suara mati di Production?** Vercel tidak bisa menjangkau `localhost:8000`. Di Production dibutuhkan Whisper yang bisa diakses dari internet (Azure OpenAI Whisper di Fase 2, atau Speaches di server sendiri **dengan** API key). Selama itu belum ada, tombol mikrofon tetap tampil dan menjelaskan bahwa suara belum tersedia.
+> **Kenapa suara mati di Production?** Vercel tidak bisa menjangkau `localhost:8000`. Cara menyalakannya lewat Azure: [`docs/migrasi-azure.md`](docs/migrasi-azure.md). Di Production dibutuhkan Whisper yang bisa diakses dari internet (Azure OpenAI Whisper di Fase 2, atau Speaches di server sendiri **dengan** API key). Selama itu belum ada, tombol mikrofon tetap tampil dan menjelaskan bahwa suara belum tersedia.
 
 ---
 
@@ -334,7 +334,7 @@ Menemukan celah keamanan? Laporkan ke ketua kelompok secara pribadi, bukan lewat
 **Sudah berjalan di Production:** semua fitur di bagian 2, kecuali AI teks, suara, dan ringkasan mingguan versi AI. Ketiganya menunggu kunci penyedia AI. Sementara itu, kolom kalimat jatuh ke form manual dan ringkasan mingguan memakai templat. Ketiganya sudah bisa dicoba penuh di komputer sendiri (bagian 6–7).
 
 **Berikutnya:**
-1. **Fase 2 (Azure):** Azure OpenAI + Whisper supaya AI teks dan suara aktif di Production. Setelah itu jalankan ulang `pnpm eval:ai`.
+1. **Fase 2 (Azure):** Azure OpenAI + Whisper supaya AI teks dan suara aktif di Production. Setelah itu jalankan ulang `pnpm eval:ai`. Langkah lengkapnya: [`docs/migrasi-azure.md`](docs/migrasi-azure.md).
 2. **Uji coba 14 hari** dengan minimal 10 mahasiswa ([`docs/uji-coba.md`](docs/uji-coba.md)) untuk mengukur retensi dan akurasi AI dari data nyata.
 
 Progres per tugas: [`docs/progres.md`](docs/progres.md). Catatan serah-terima antarsesi: [`docs/task.md`](docs/task.md).
