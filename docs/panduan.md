@@ -4,7 +4,7 @@ title: Panduan Pengguna & Pengembang
 
 # Panduan Centsible
 
-Halaman ini menjelaskan cara memakai Centsible, cara menjalankannya sendiri, dan cara mengujinya. Rancangan teknis ada di [Arsitektur Sistem](arsitektur.md) dan [Rancangan Basis Data](database.md); status pekerjaan ada di [Progres Proyek](progres.md). Bahan presentasi akhir: [Slide](slide.html).
+Halaman ini menjelaskan cara memakai Centsible, cara menjalankannya sendiri, dan cara mengujinya. Rancangan teknis ada di [Arsitektur Sistem](arsitektur.md) dan [Rancangan Basis Data](database.md); langkah pindah ke Azure ada di [Migrasi ke Azure](migrasi-azure.md); status pekerjaan ada di [Progres Proyek](progres.md). Bahan presentasi akhir: [Slide](slide.html).
 
 ## 1. Untuk pengguna
 
