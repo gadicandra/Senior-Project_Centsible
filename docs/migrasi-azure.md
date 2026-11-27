@@ -2,382 +2,121 @@
 title: Migrasi ke Azure (Fase 2)
 ---
 
-# Migrasi ke Azure (Fase 2)
+# Migrasi ke Azure (Fase 2): seluruh aplikasi di Azure
 
-Tutorial ini menyalakan tiga hal di Production memakai Azure: **AI Parse** (kalimat → transaksi, sekaligus ringkasan mingguan), **AI STT** (suara → teks), dan opsional **deploy aplikasi** ke Azure Container Apps.
+Target migrasi ini adalah **Tingkat B**: aplikasi Next.js, cron mingguan, AI Parse (LLM), dan AI STT semuanya berjalan di Azure. Supabase tetap menjadi database dan auth.
 
-Setiap langkah punya dua alur yang hasilnya sama, jadi pilih salah satu:
-- **[Alur Portal](#4-alur-portal-web)**: lewat browser di https://portal.azure.com dan https://ai.azure.com
-- **[Alur CLI](#5-alur-azure-cli)**: lewat Azure CLI, bisa disalin sebagai skrip
+Migrasi dilakukan dalam **dua tahap** dengan langkah yang sama, hanya nilainya berbeda:
 
-> **Kode tidak perlu diubah.** Azure OpenAI punya **API v1** yang kompatibel dengan OpenAI (`https://<resource>.openai.azure.com/openai/v1/`). Centsible sudah memakai jalur `openai-compatible` untuk AI teks dan Whisper, jadi cukup mengganti **variabel env**. Jangan isi `AI_TEXT_PROVIDER=azure`, karena nilai itu dicadangkan untuk login tanpa kunci dan belum diimplementasikan.
+| Tahap | Langganan | Tujuan |
+|---|---|---|
+| **Tahap 1: uji coba** | **Azure for Students** (pribadi) | Membuktikan semua langkah berjalan, memakai Supabase **dev** |
+| **Tahap 2: produksi** | **DTETI-LabIT** (departemen) | Menjalankan aplikasi untuk pengguna, memakai Supabase **production** |
+
+Setiap tahap bisa dikerjakan lewat salah satu dari dua alur yang hasilnya sama:
+- **[Alur Portal](#5-alur-portal-web)**: browser, https://portal.azure.com dan https://ai.azure.com
+- **[Alur CLI](#6-alur-azure-cli)**: Azure CLI, bisa disalin sebagai skrip
+
+> **Kode aplikasi tidak perlu diubah.** Azure OpenAI punya **API v1** yang kompatibel dengan OpenAI (`https://<resource>.openai.azure.com/openai/v1/`), dan Centsible sudah memakai jalur `openai-compatible` untuk AI teks dan Whisper. Yang ditambahkan hanya berkas Docker (bagian 3). Jangan isi `AI_TEXT_PROVIDER=azure`; nilai itu dicadangkan untuk login tanpa kunci dan belum diimplementasikan.
 
 ## Daftar isi
 
 1. [Hasil pengecekan langganan Azure](#1-hasil-pengecekan-langganan-azure)
-2. [Keputusan: langganan, region, model](#2-keputusan-langganan-region-model)
-3. [Nama & nilai yang dipakai](#3-nama--nilai-yang-dipakai)
-4. [Alur Portal (web)](#4-alur-portal-web)
-5. [Alur Azure CLI](#5-alur-azure-cli)
-6. [Persiapan repo untuk Docker (khusus deploy)](#6-persiapan-repo-untuk-docker-khusus-deploy)
-7. [Uji coba di komputer sendiri](#7-uji-coba-di-komputer-sendiri)
-8. [Nyalakan di Production](#8-nyalakan-di-production)
-9. [Biaya & pengaman](#9-biaya--pengaman)
-10. [Masalah umum](#10-masalah-umum)
-11. [Rollback & bersih-bersih](#11-rollback--bersih-bersih)
-12. [Sumber & verifikasi](#12-sumber--verifikasi)
+2. [Arsitektur & keputusan](#2-arsitektur--keputusan)
+3. [Persiapan repo (sekali)](#3-persiapan-repo-sekali)
+4. [Nilai per tahap](#4-nilai-per-tahap)
+5. [Alur Portal (web)](#5-alur-portal-web)
+6. [Alur Azure CLI](#6-alur-azure-cli)
+7. [Uji coba setelah deploy](#7-uji-coba-setelah-deploy)
+8. [Pindah ke produksi (Tahap 2) & cutover dari Vercel](#8-pindah-ke-produksi-tahap-2--cutover-dari-vercel)
+9. [Update versi aplikasi](#9-update-versi-aplikasi)
+10. [Biaya & pengaman](#10-biaya--pengaman)
+11. [Masalah umum](#11-masalah-umum)
+12. [Rollback & bersih-bersih](#12-rollback--bersih-bersih)
+13. [Sumber & verifikasi](#13-sumber--verifikasi)
 
 ---
 
 ## 1. Hasil pengecekan langganan Azure
 
-Dicek dengan Azure CLI pada **27 November 2026**. Akun kampus terhubung ke dua langganan di dua tenant berbeda.
+Dicek dengan Azure CLI 2.93.0 pada **27 November 2026**. Akun kampus terhubung ke dua langganan di dua tenant berbeda.
 
-### 1.1 DTETI-LabIT (langganan departemen)
+### 1.1 Azure for Students (Tahap 1)
+
+| Cek | Hasil |
+|---|---|
+| Status | Enabled; akun = pemilik langganan (boleh membuat *role assignment*) |
+| Kredit | ±US$100, dipotong oleh semua pemakaian. Kalau habis, resource dihentikan (tidak ditagih) |
+| Policy region | **Dibatasi** ke `indonesiacentral`, `centralindia`, `eastasia`, `japaneast`, `uaenorth`. Region lain ditolak `RequestDisallowedByPolicy` |
+| Resource provider | `Microsoft.CognitiveServices`, `Microsoft.App`, `Microsoft.ContainerRegistry`, `Microsoft.OperationalInsights` masih **NotRegistered**, jadi harus didaftarkan dulu (gratis) |
+| Resource lain | RG `passgo-rg`: App Service plan **B1** + 2 web app (`indonesiacentral`). B1 memotong kredit tiap bulan; hapus kalau tidak dipakai |
+| Quota tier & kuota | Belum terbaca karena provider belum terdaftar; cek di langkah 5.3/6.3 |
+
+| Region yang diizinkan | `gpt-4.1-mini` (parse) | Model STT |
+|---|---|---|
+| `japaneast` | ✅ Standard, Global Standard | ❌ (`whisper` terdaftar tanpa SKU) |
+| **`uaenorth`** | ✅ Global Standard | ✅ `whisper` Standard; `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, `gpt-transcribe` Global Standard |
+| `eastasia`, `centralindia` | Hanya Provisioned (mahal) | ❌ |
+| `indonesiacentral` | Azure OpenAI tidak tersedia | ❌ |
+
+### 1.2 DTETI-LabIT (Tahap 2)
 
 | Cek | Hasil |
 |---|---|
 | Status | Enabled |
-| Akses akun | Hanya di resource group **`Resource_Group_25-27`** (lokasi RG `japanwest`). Di dalam RG semua aksi boleh (`*`), **kecuali** menulis/menghapus *role assignment* (`Microsoft.Authorization/*/Write`) dan menghapus RG itu sendiri. Tidak ada izin di level langganan |
+| Akses akun | Hanya di resource group **`Resource_Group_25-27`** (lokasi RG `japanwest`). Di dalam RG semua aksi boleh, **kecuali** membuat/menghapus *role assignment* dan menghapus RG itu sendiri. Tidak ada izin level langganan |
 | Isi RG | Kosong |
-| Resource provider | `Microsoft.CognitiveServices`, `Microsoft.App`, `Microsoft.ContainerRegistry`, `Microsoft.OperationalInsights` **sudah Registered** |
-| Policy region | **Tidak ada**, semua region boleh |
-| Quota tier & kuota per model | **Tidak bisa dibaca** (403 dan hasil kosong), karena butuh izin level langganan. Kuota baru ketahuan saat deploy |
+| Resource provider | Keempat provider di atas **sudah Registered** |
+| Policy region | Tidak ada, semua region boleh |
+| Quota tier & kuota | **Tidak bisa dibaca** (butuh izin level langganan); ketahuan saat deploy |
 
-Model yang bisa di-deploy (`az cognitiveservices model list`):
-
-| Region | `gpt-4.1-mini` (parse) | Model STT |
-|---|---|---|
-| `japaneast` | ✅ Standard, Global Standard | ❌ (`whisper` terdaftar tanpa SKU) |
-| `southeastasia` | ✅ Global Standard | ❌ |
-| `japanwest` | ❌ | ❌ |
-| **`southindia`** | ✅ Standard, Global Standard | ✅ `whisper` Standard, `gpt-4o-mini-transcribe` & `gpt-4o-transcribe` & `gpt-transcribe` Global Standard |
-| `eastus2`, `swedencentral` | ✅ | ✅ |
-
-### 1.2 Azure for Students (langganan pribadi, kredit ±US$100)
-
-| Cek | Hasil |
-|---|---|
-| Status | Enabled, akun = pemilik langganan |
-| Policy region | **Dibatasi** ke `indonesiacentral`, `centralindia`, `eastasia`, `japaneast`, `uaenorth`. Region lain ditolak `RequestDisallowedByPolicy` |
-| Resource provider | Keempat provider di atas **NotRegistered**, jadi harus didaftarkan dulu (gratis) |
-| Quota tier & kuota | Belum terbaca karena provider belum terdaftar |
-
-| Region (yang diizinkan) | `gpt-4.1-mini` | Model STT |
+| Region | `gpt-4.1-mini` | Model STT |
 |---|---|---|
 | `japaneast` | ✅ Standard, Global Standard | ❌ |
-| **`uaenorth`** | ✅ Global Standard | ✅ `whisper` Standard, `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, `gpt-transcribe` |
-| `eastasia`, `centralindia` | Hanya Provisioned (mahal) | ❌ |
-| `indonesiacentral` | Azure OpenAI tidak tersedia | ❌ |
+| `southeastasia` | ✅ Global Standard | ❌ |
+| `japanwest` | ❌ | ❌ |
+| **`southindia`** | ✅ Standard, Global Standard | ✅ `whisper` Standard; `gpt-4o-mini-transcribe`, `gpt-4o-transcribe`, `gpt-transcribe` Global Standard |
+| `eastus2`, `swedencentral` | ✅ | ✅ |
 
 ### 1.3 Catatan dari dokumentasi Microsoft
 
-- **Kredit ≠ kuota.** Kredit membayar pemakaian, sedangkan kuota (token per menit) membatasi berapa banyak yang boleh di-deploy per model per region. Kalau kuota model 0, deploy gagal (`InsufficientQuota`) walaupun kredit masih ada.
+- **Kredit ≠ kuota.** Kredit membayar pemakaian; kuota (token per menit) membatasi berapa banyak yang boleh di-deploy per model per region. Kuota 0 → deploy gagal (`InsufficientQuota`) walaupun kredit masih ada.
 - Langganan berbasis kredit bisa berada di **quota tier "Free tier" (Tier 0)**. Tabel Tier 0 mencantumkan `gpt-4.1-mini` Global Standard 200K TPM; Tier 0 **tidak bisa** mengajukan tambah kuota.
-- Model Claude di Foundry tidak tersedia untuk langganan *student/credit-based*. Centsible tidak memakainya di Azure.
-- Jadwal pensiun (dari `model list`): `whisper 001` 26 Feb 2027 · `gpt-4.1-mini 2025-04-14` 14 Apr 2027 · `gpt-4o-mini-transcribe 2025-12-15` 15 Jun 2027 · `gpt-transcribe 2026-07-28` 1 Feb 2028.
+- Model Claude di Foundry tidak tersedia untuk langganan *student/credit-based* (Centsible tidak memakainya di Azure).
+- Jadwal pensiun: `whisper 001` 26 Feb 2027 · `gpt-4.1-mini 2025-04-14` 14 Apr 2027 · `gpt-4o-mini-transcribe 2025-12-15` 15 Jun 2027 · `gpt-transcribe 2026-07-28` 1 Feb 2028.
 
 ---
 
-## 2. Keputusan: langganan, region, model
+## 2. Arsitektur & keputusan
+
+```
+Browser ─► Container App "centsible" (japaneast) ──► Supabase (Tokyo)
+                 │
+                 └──► Azure OpenAI (uaenorth / southindia)
+                        ├─ deployment "parse"  (gpt-4.1-mini)       ◄── juga dipakai ringkasan mingguan
+                        └─ deployment "stt"    (gpt-4o-mini-transcribe)
+
+Container Apps Job "job-weekly" (cron 0 23 * * 0 UTC = Senin 06:00 WIB) ─► https://<centsible>/api/cron/weekly
+Container Registry "centsibleacr…" ─► image centsible:<tag>
+```
 
 | Keputusan | Pilihan | Alasan |
 |---|---|---|
-| Langganan | **DTETI-LabIT** (utama), Azure for Students (cadangan) | Provider sudah terdaftar, region bebas, kredit pribadi tidak terpakai. **Minta izin admin lab dulu** bahwa RG boleh dipakai untuk proyek ini |
-| Region Azure OpenAI | **`southindia`** (cadangan Students: `uaenorth`) | Satu-satunya region dekat yang punya model parse **dan** STT, jadi cukup satu resource dan satu kunci. Tambahan latensi dari Tokyo ±100 ms, jauh di bawah timeout 8 detik |
-| Model parse | **`gpt-4.1-mini` 2025-04-14**, Global Standard | Bukan model *reasoning*, jadi `temperature` dan `max_tokens` di kode tetap valid. Mendukung *structured outputs* |
-| Model STT | **`gpt-4o-mini-transcribe` 2025-12-15**, Global Standard (alternatif `whisper` Standard) | Lebih akurat untuk bahasa campuran dan pensiun lebih lambat dari `whisper`. Menerima `language`, `prompt`, `response_format` sama seperti Whisper |
-| Hosting aplikasi | **Tetap di Vercel** (Tingkat A). Container Apps opsional (Tingkat B) | Tingkat A sudah cukup untuk uji coba #37 |
-| Region Container Apps (Tingkat B) | `japaneast` | Satu region dengan Supabase (Tokyo). Region resource tidak harus sama dengan lokasi RG |
-| Tarik image dari ACR (Tingkat B) | **Admin user ACR** (username/password) | Di DTETI-LabIT akun tidak boleh membuat *role assignment*, sehingga `--registry-identity system` (butuh peran `AcrPull`) akan gagal |
-
-```
-Tingkat A (disarankan)                         Tingkat B (opsional)
-Browser ─► Vercel (Next.js) ─► Supabase        Browser ─► Container App "centsible" (japaneast) ─► Supabase
-              │                                              ├─► Azure OpenAI (southindia)
-              └─► Azure OpenAI (southindia)                  └─ Job "job-weekly" (cron) ─► /api/cron/weekly
-                   ├─ deployment "parse"
-                   └─ deployment "stt"
-```
+| Hosting aplikasi | **Azure Container Apps** (Consumption) di `japaneast` | Satu region dengan Supabase; aplikasi sangat sering bolak-balik ke database |
+| Region Azure OpenAI | Tahap 1 **`uaenorth`**, Tahap 2 **`southindia`** | Satu-satunya region yang (diizinkan dan) punya model parse **dan** STT, jadi cukup satu resource dan satu kunci. Tambahan latensi ±100–200 ms, jauh di bawah timeout 8 detik |
+| Model parse | **`gpt-4.1-mini` 2025-04-14**, Global Standard | Bukan model *reasoning*, jadi `temperature`/`max_tokens` di kode tetap valid; mendukung *structured outputs* |
+| Model STT | **`gpt-4o-mini-transcribe` 2025-12-15**, Global Standard (cadangan `whisper` Standard) | Lebih akurat untuk bahasa campuran dan pensiun lebih lambat. Menerima `language`, `prompt`, `response_format` seperti Whisper |
+| Build image | **`az acr build`** (ACR Tasks) | Image dibangun di Azure; Docker di laptop tidak wajib |
+| Tarik image dari ACR | Tahap 1: **managed identity** (`--registry-identity system`) di alur CLI, admin user di alur Portal · Tahap 2: **admin user ACR** | Managed identity butuh *role assignment* `AcrPull`, yang tidak boleh dibuat di DTETI-LabIT |
+| Rahasia | **Container Apps secrets** + `secretref:` | Nilai rahasia tidak tampil di konfigurasi. Key Vault bisa ditambahkan nanti |
+| Cron | **Container Apps Job** terjadwal yang memanggil `/api/cron/weekly` dengan `CRON_SECRET` | Endpoint yang sama dengan Vercel Cron; idempoten |
 
 ---
 
-## 3. Nama & nilai yang dipakai
+## 3. Persiapan repo (sekali)
 
-| Apa | Nilai |
-|---|---|
-| Langganan | `DTETI-LabIT` |
-| Resource group | `Resource_Group_25-27` (sudah ada, **jangan** dibuat baru) |
-| Resource Azure OpenAI | `centsible-ai-<inisial>`, misalnya `centsible-ai-gac` (harus unik global, dipakai di URL) |
-| Region Azure OpenAI | `southindia` |
-| Deployment parse | `parse` → `gpt-4.1-mini` 2025-04-14 |
-| Deployment STT | `stt` → `gpt-4o-mini-transcribe` 2025-12-15 |
-| Container Registry (Tingkat B) | `centsibleacr<angka>` (unik global, huruf kecil dan angka saja) |
-| Container Apps environment (Tingkat B) | `cae-centsible` di `japaneast` |
-| Container App & job (Tingkat B) | `centsible`, `job-weekly` |
+Lakukan lewat PR biasa sebelum Tahap 1, lalu merge ke `main`.
 
-**Base URL** untuk Centsible = endpoint + `openai/v1/` → `https://centsible-ai-gac.openai.azure.com/openai/v1/`.
-
----
-
-## 4. Alur Portal (web)
-
-### 4.1 Pilih langganan
-
-1. Buka https://portal.azure.com dan login dengan akun `@365.ugm.ac.id`.
-2. Klik ikon ⚙️ **Settings** (kanan atas) → **Directories + subscriptions** → pilih direktori departemen. Pastikan filter langganan memuat **DTETI-LabIT**.
-3. Cari **Resource groups** → `Resource_Group_25-27` harus muncul.
-
-### 4.2 Buat resource Azure OpenAI
-
-1. Cari **Azure OpenAI** → **Create**.
-2. **Basics:**
-   - Subscription `DTETI-LabIT` · Resource group `Resource_Group_25-27`
-   - Region **South India** · Name `centsible-ai-gac` · Pricing tier **Standard S0**
-3. **Network:** *All networks, including the internet* (Vercel tidak punya IP tetap).
-4. **Review + submit → Create**, tunggu ±1 menit.
-5. Buka resource → **Resource Management → Keys and Endpoint**. Catat **Endpoint** dan **KEY 1**. KEY 1 rahasia: simpan di password manager, jangan di-commit, jangan ditempel di chat.
-
-### 4.3 Deploy model AI Parse
-
-1. Di halaman resource klik **Go to Foundry portal** (atau buka https://ai.azure.com dan pilih resource `centsible-ai-gac`).
-2. **Model catalog** → cari **`gpt-4.1-mini`** → **Deploy → Custom settings**:
-   - **Deployment name:** `parse`, yang nanti diisi ke `AI_TEXT_MODEL` (bukan nama model)
-   - **Deployment type:** Global Standard
-   - **Model version:** `2025-04-14`
-   - **Tokens per Minute Rate Limit:** 50K
-3. **Deploy**. Kalau muncul pesan kuota tidak cukup, turunkan TPM (mis. 10K) lalu coba lagi.
-4. Uji di **Playground → Chat**, pilih deployment `parse`, ketik "Balas: ok".
-
-### 4.4 Deploy model AI STT
-
-1. **Model catalog** → cari **`gpt-4o-mini-transcribe`** → **Deploy → Custom settings**:
-   - **Deployment name:** `stt` · **Deployment type:** Global Standard · **Version:** `2025-12-15`
-2. **Deploy**. Kalau gagal karena kuota, coba **`whisper`** (Deployment type **Standard**) dengan nama yang sama `stt`.
-3. Uji dengan curl di [7. Uji coba](#7-uji-coba-di-komputer-sendiri). Playground audio tidak dibutuhkan.
-
-### 4.5 Budget alert
-
-Portal → **Cost Management → Budgets** → ganti **Scope** ke `Resource_Group_25-27` → **Add**:
-- Amount US$20, Reset period Monthly
-- Alert conditions: Actual 50%, 80%, 100% → email kamu
-
-### 4.6 Nyalakan di Vercel
-
-Lanjutkan ke [8. Nyalakan di Production](#8-nyalakan-di-production). Kalau hanya Tingkat A, selesai di sini.
-
-### 4.7 (Tingkat B) Deploy aplikasi ke Container Apps
-
-Selesaikan dulu [6. Persiapan repo](#6-persiapan-repo-untuk-docker-khusus-deploy), merge ke `main`.
-
-**a. Container Registry**
-1. Cari **Container registries → Create** → RG `Resource_Group_25-27`, Registry name `centsibleacr<angka>`, Location **Japan East**, Pricing plan **Basic** → **Review + create → Create**.
-2. Buka registry → **Settings → Access keys** → aktifkan **Admin user**. Catat *Login server*, *Username*, dan *password*.
-
-**b. Build image (tanpa Docker di laptop)**
-1. Klik ikon **Cloud Shell** `>_` di bar atas portal → pilih **Bash** → *No storage account required* → pilih langganan **DTETI-LabIT**.
-2. Jalankan:
-   ```bash
-   az acr build -r centsibleacr<angka> -t centsible:v1 \
-     --build-arg NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co \
-     --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_… \
-     https://github.com/gadicandra/Senior-Project_Centsible.git#main
-   ```
-   ACR mengambil kode dari GitHub dan membangunnya di Azure (±3–5 menit).
-
-**c. Container App**
-1. Cari **Container Apps → Create**.
-2. **Basics:** RG `Resource_Group_25-27`, Name `centsible`, Region **Japan East**, Container Apps environment **Create new** → `cae-centsible`, *Consumption only*.
-3. **Container:** hapus centang *Use quickstart image* →
-   - Image source **Azure Container Registry** → registry `centsibleacr<angka>`, Image `centsible`, Tag `v1`
-   - Authentication: **Admin credentials**
-   - CPU and memory **0.5 CPU, 1 Gi**
-   - Environment variables: sementara isi yang **tidak rahasia** saja (tabel [8.1](#81-vercel-tingkat-a) baris tanpa ✅, ditambah `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`, `AI_PARSE_DAILY_LIMIT=100`)
-4. **Ingress:** Enabled · *Accepting traffic from anywhere* · Target port **3000**.
-5. **Review + create → Create**.
-6. Setelah jadi: **Settings → Secrets → Add**: `database-url`, `supabase-secret`, `ai-key`, `draft-secret`, `cron-secret`.
-7. **Application → Containers → Edit and deploy** → container → **Environment variables** → tambahkan `DATABASE_URL`, `SUPABASE_SECRET_KEY`, `AI_TEXT_API_KEY`, `AI_STT_API_KEY`, `AI_DRAFT_SECRET`, `CRON_SECRET` dengan Source **Reference a secret** → **Save → Create**.
-8. **Application → Scale:** Min replicas 1, Max 2 (min 1 menghindari *cold start*).
-9. **Overview → Application Url**, buka di browser lalu login.
-
-**d. Cron ringkasan mingguan**
-1. Cari **Container App Jobs → Create** → RG yang sama, Name `job-weekly`, environment `cae-centsible`.
-2. **Trigger type:** Scheduled · Cron expression `0 23 * * 0` (dievaluasi dalam **UTC** = Senin 06:00 WIB).
-3. **Container:** Image source *Docker Hub or other registries* · Public · Registry `docker.io` · Image `curlimages/curl:8.11.1` · CPU 0.25 / 0.5 Gi
-   - **Command override:** `/bin/sh`
-   - **Arguments override:** `-c, curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/weekly"`
-   - Env `APP_URL` = Application Url `centsible`; `CRON_SECRET` sebagai secret (sama seperti langkah c.6–7)
-4. Create → buka job → **Run now** → **Execution history** harus *Succeeded*.
-
-Lanjut ke [8.2 Pindah ke Tingkat B](#82-pindah-ke-tingkat-b).
-
----
-
-## 5. Alur Azure CLI
-
-Bisa di terminal laptop atau di **Cloud Shell** portal.
-
-### 5.1 Login & pilih langganan
-
-```bash
-curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash          # sekali, Ubuntu/Debian
-az login --tenant <tenant-departemen>                           # tenant DTETI
-az account list --all -o table                                  # harus ada DTETI-LabIT
-az account set --subscription "DTETI-LabIT"
-```
-
-### 5.2 Variabel
-
-```bash
-RG=Resource_Group_25-27
-AI=centsible-ai-gac          # unik global
-AI_LOC=southindia
-APP_LOC=japaneast            # khusus Tingkat B
-```
-
-### 5.3 Cek ketersediaan model (opsional, sudah dirangkum di bagian 1)
-
-```bash
-az cognitiveservices model list -l $AI_LOC \
-  --query "[?model.name=='gpt-4.1-mini' || model.name=='gpt-4o-mini-transcribe' || model.name=='whisper'].{model:model.name, versi:model.version, sku:join(',', model.skus[].name)}" -o table
-```
-
-### 5.4 Buat resource Azure OpenAI
-
-```bash
-az cognitiveservices account create -g $RG -n $AI -l $AI_LOC \
-  --kind OpenAI --sku S0 --custom-domain $AI --yes
-
-az cognitiveservices account show -g $RG -n $AI --query properties.endpoint -o tsv
-AI_KEY=$(az cognitiveservices account keys list -g $RG -n $AI --query key1 -o tsv)
-```
-
-### 5.5 Deploy AI Parse
-
-```bash
-az cognitiveservices account deployment create -g $RG -n $AI \
-  --deployment-name parse \
-  --model-name gpt-4.1-mini --model-version 2025-04-14 --model-format OpenAI \
-  --sku-name GlobalStandard --sku-capacity 50          # 50 = 50K TPM
-
-curl -s https://$AI.openai.azure.com/openai/v1/chat/completions \
-  -H "Content-Type: application/json" -H "api-key: $AI_KEY" \
-  -d '{"model":"parse","messages":[{"role":"user","content":"Balas: ok"}],"max_tokens":5}'
-```
-
-`InsufficientQuota` → ulangi dengan `--sku-capacity 10`.
-
-### 5.6 Deploy AI STT
-
-```bash
-az cognitiveservices account deployment create -g $RG -n $AI \
-  --deployment-name stt \
-  --model-name gpt-4o-mini-transcribe --model-version 2025-12-15 --model-format OpenAI \
-  --sku-name GlobalStandard --sku-capacity 10
-
-# Cadangan kalau gagal: whisper (Standard)
-# az cognitiveservices account deployment create -g $RG -n $AI --deployment-name stt \
-#   --model-name whisper --model-version 001 --model-format OpenAI --sku-name Standard --sku-capacity 1
-
-az cognitiveservices account deployment list -g $RG -n $AI \
-  --query "[].{nama:name, model:properties.model.name, versi:properties.model.version, status:properties.provisioningState}" -o table
-
-curl -s https://$AI.openai.azure.com/openai/v1/audio/transcriptions -H "api-key: $AI_KEY" \
-  -F file=@rekaman.wav -F model=stt -F language=id -F "prompt=gocap, ceban, goceng, 25rb, kos"
-```
-
-### 5.7 Budget alert (scope resource group)
-
-```bash
-az consumption budget create --resource-group $RG --budget-name centsible-20usd \
-  --amount 20 --category cost --time-grain monthly \
-  --start-date $(date +%Y-%m-01) --end-date $(date -d '+1 year' +%Y-%m-01)
-```
-Alert email paling mudah ditambahkan di Portal → Cost Management → Budgets → `centsible-20usd` → *Alert conditions*.
-
-### 5.8 (Tingkat B) Deploy aplikasi ke Container Apps
-
-Selesaikan dulu [6. Persiapan repo](#6-persiapan-repo-untuk-docker-khusus-deploy).
-
-```bash
-az extension add --name containerapp --upgrade
-
-# Registry + build image di Azure
-ACR=centsibleacr$RANDOM
-az acr create -g $RG -n $ACR -l $APP_LOC --sku Basic --admin-enabled true
-TAG=$(git rev-parse --short HEAD)
-az acr build -r $ACR -t centsible:$TAG \
-  --build-arg NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co \
-  --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_… .
-ACR_PASS=$(az acr credential show -n $ACR --query "passwords[0].value" -o tsv)
-
-# Environment
-az containerapp env create -g $RG -n cae-centsible -l $APP_LOC
-
-# Aplikasi (rahasia lewat --secrets + secretref:)
-az containerapp create -g $RG -n centsible --environment cae-centsible \
-  --image $ACR.azurecr.io/centsible:$TAG \
-  --registry-server $ACR.azurecr.io --registry-username $ACR --registry-password "$ACR_PASS" \
-  --target-port 3000 --ingress external \
-  --min-replicas 1 --max-replicas 2 --cpu 0.5 --memory 1Gi \
-  --secrets \
-     database-url='<DATABASE_URL>' supabase-secret='<SUPABASE_SECRET_KEY>' \
-     ai-key="$AI_KEY" draft-secret='<AI_DRAFT_SECRET>' cron-secret='<CRON_SECRET>' \
-  --env-vars \
-     NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co \
-     NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_… \
-     DATABASE_URL=secretref:database-url SUPABASE_SECRET_KEY=secretref:supabase-secret \
-     AI_TEXT_PROVIDER=openai-compatible AI_TEXT_MODEL=parse \
-     AI_TEXT_BASE_URL=https://$AI.openai.azure.com/openai/v1/ AI_TEXT_API_KEY=secretref:ai-key \
-     AI_STT_ENABLED=true AI_STT_MODEL=stt \
-     AI_STT_BASE_URL=https://$AI.openai.azure.com/openai/v1/ AI_STT_API_KEY=secretref:ai-key \
-     AI_DRAFT_SECRET=secretref:draft-secret AI_PARSE_DAILY_LIMIT=100 CRON_SECRET=secretref:cron-secret
-
-APP=https://$(az containerapp show -g $RG -n centsible --query properties.configuration.ingress.fqdn -o tsv)
-echo $APP
-
-# Cron mingguan (UTC)
-az containerapp job create -g $RG -n job-weekly --environment cae-centsible \
-  --trigger-type Schedule --cron-expression "0 23 * * 0" \
-  --replica-timeout 300 --replica-retry-limit 1 --parallelism 1 --replica-completion-count 1 \
-  --image curlimages/curl:8.11.1 --cpu 0.25 --memory 0.5Gi \
-  --secrets cron-secret='<CRON_SECRET>' --env-vars CRON_SECRET=secretref:cron-secret APP_URL=$APP \
-  --command "/bin/sh" --args "-c" 'curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/weekly"'
-
-az containerapp job start -g $RG -n job-weekly
-az containerapp job execution list -g $RG -n job-weekly -o table
-```
-
-**Update versi berikutnya:**
-```bash
-TAG=$(git rev-parse --short HEAD)
-az acr build -r $ACR -t centsible:$TAG --build-arg … .
-az containerapp update -g $RG -n centsible --image $ACR.azurecr.io/centsible:$TAG
-```
-
-> Di langganan **Azure for Students** (kamu pemilik langganan) boleh memakai `--registry-identity system` sebagai ganti admin user, yang lebih aman karena tanpa password. Di DTETI-LabIT opsi itu gagal karena butuh izin membuat *role assignment*.
-
-Lanjut ke [8.2 Pindah ke Tingkat B](#82-pindah-ke-tingkat-b).
-
-### 5.9 Cadangan: memakai Azure for Students
-
-Jalankan hanya kalau DTETI-LabIT tidak boleh dipakai atau kuotanya habis.
-
-```bash
-az account set --subscription "Azure for Students"
-for p in Microsoft.CognitiveServices Microsoft.App Microsoft.ContainerRegistry Microsoft.OperationalInsights; do
-  az provider register -n $p --wait
-done
-az group create -n rg-centsible -l japaneast
-RG=rg-centsible; AI_LOC=uaenorth      # region yang diizinkan policy DAN punya model STT
-```
-Setelah itu ulangi 5.4–5.8. Untuk alur Portal caranya sama: buat RG `rg-centsible` (Japan East), lalu resource Azure OpenAI di **UAE North**.
-
----
-
-## 6. Persiapan repo untuk Docker (khusus deploy)
-
-Hanya dibutuhkan untuk Tingkat B. Buat lewat PR biasa.
 
 **a. `next.config.ts`**: tambahkan `output: "standalone"` supaya image Docker kecil:
 ```ts
@@ -434,125 +173,436 @@ coverage
 eval/results
 ```
 
-Cek di laptop dulu:
+Cek di laptop dulu. Nilai `NEXT_PUBLIC_*` diambil langsung dari `.env.local`, jadi tidak ada yang perlu diketik ulang:
 ```bash
+env_val() { grep -E "^$1=" .env.local | tail -1 | cut -d= -f2- | tr -d "\"'"; }
+
 docker build -t centsible:local \
-  --build-arg NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co \
-  --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_… .
+  --build-arg NEXT_PUBLIC_SUPABASE_URL="$(env_val NEXT_PUBLIC_SUPABASE_URL)" \
+  --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY="$(env_val NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY)" .
+
 docker run --rm -p 3000:3000 --env-file .env.local centsible:local
 ```
 Buka http://localhost:3000, lalu login dan catat satu transaksi.
 
+> **Jangan menyalin `<…>` apa adanya.** Di seluruh tutorial, `<ref>`, `<inisial>`, `<KEY 1>`, dan sejenisnya adalah placeholder yang harus diganti **beserta tanda kurungnya**. Kalau tertinggal, bash membaca `<` sebagai redirect file (`bash: ref: No such file or directory`), build tidak jalan, lalu `docker run` gagal dengan `pull access denied for centsible`.
+>
+> `--env-file` Docker tidak membuang tanda kutip. Kalau nilai di `.env.local` ditulis `KEY="nilai"`, kutipnya ikut terbaca, jadi hapus kutipnya untuk tes ini. Di dalam container, `localhost` adalah container itu sendiri, jadi Speaches lokal (`AI_STT_BASE_URL=http://localhost:8000/v1`) tidak terjangkau. Untuk tes ini matikan STT (`-e AI_STT_ENABLED=false`) atau pakai `http://host.docker.internal:8000/v1` dengan tambahan `--add-host=host.docker.internal:host-gateway`.
+
+**d. `vercel.json`** tidak diubah dulu. Blok `crons` baru dihapus saat cutover (bagian 8), supaya Vercel tetap jalan selama uji coba.
+
 ---
 
-## 7. Uji coba di komputer sendiri
+## 4. Nilai per tahap
 
-Ubah `.env.local`. Simpan nilai lamanya kalau mau kembali ke gateway/Speaches lokal.
+Ganti `<inisial>` dengan inisial kamu (mis. `gac`) dan `<angka>` dengan angka acak, karena nama Azure OpenAI dan ACR harus unik global.
 
-```env
-AI_TEXT_PROVIDER=openai-compatible
-AI_TEXT_BASE_URL=https://centsible-ai-gac.openai.azure.com/openai/v1/
-AI_TEXT_MODEL=parse                 # nama DEPLOYMENT
-AI_TEXT_API_KEY=<KEY 1>
+| Nilai | Tahap 1: Azure for Students | Tahap 2: DTETI-LabIT |
+|---|---|---|
+| Langganan | `Azure for Students` | `DTETI-LabIT` |
+| Resource group | `rg-centsible` (**buat baru**, Japan East) | `Resource_Group_25-27` (**sudah ada**, jangan buat baru) |
+| Daftarkan resource provider | **Ya** (langkah 5.1 / 6.1) | Tidak perlu |
+| Azure OpenAI | `centsible-ai-<inisial>-trial` di **UAE North** | `centsible-ai-<inisial>` di **South India** |
+| Container Registry | `centsibletrial<angka>` (Japan East, Basic) | `centsibleacr<angka>` (Japan East, Basic) |
+| Container Apps environment | `cae-centsible` (Japan East) | `cae-centsible` (Japan East) |
+| Container App / Job | `centsible` / `job-weekly` | `centsible` / `job-weekly` |
+| Supabase | Project **dev** | Project **production** |
+| Min replicas aplikasi | `0` (hemat kredit; permintaan pertama ±beberapa detik) | `1` (tanpa *cold start*) |
 
-AI_STT_ENABLED=true
-AI_STT_BASE_URL=https://centsible-ai-gac.openai.azure.com/openai/v1/
-AI_STT_MODEL=stt                    # nama DEPLOYMENT
-AI_STT_API_KEY=<KEY 1>              # wajib untuk Azure
+**Env aplikasi** (sama untuk kedua tahap, nilainya dari tabel di atas dan dari Supabase):
+
+| Env | Nilai | Rahasia (secret) |
+|---|---|---|
+| `NEXT_PUBLIC_SUPABASE_URL` | `https://<ref>.supabase.co` (juga build arg) | |
+| `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY` | `sb_publishable_…` (juga build arg) | |
+| `DATABASE_URL` | Connection string Supabase (pooler) | ✅ `database-url` |
+| `SUPABASE_SECRET_KEY` | `sb_secret_…` | ✅ `supabase-secret` |
+| `AI_TEXT_PROVIDER` | `openai-compatible` | |
+| `AI_TEXT_BASE_URL` | `https://<nama-azure-openai>.openai.azure.com/openai/v1/` | |
+| `AI_TEXT_MODEL` | `parse` (nama **deployment**) | |
+| `AI_TEXT_API_KEY` | KEY 1 Azure OpenAI | ✅ `ai-key` |
+| `AI_STT_ENABLED` | `true` | |
+| `AI_STT_BASE_URL` | sama dengan `AI_TEXT_BASE_URL` | |
+| `AI_STT_MODEL` | `stt` (nama **deployment**) | |
+| `AI_STT_API_KEY` | KEY 1 Azure OpenAI | ✅ `ai-key` |
+| `AI_DRAFT_SECRET` | acak ≥ 32 karakter (`openssl rand -base64 32`) | ✅ `draft-secret` |
+| `AI_PARSE_DAILY_LIMIT` | `100` | |
+| `CRON_SECRET` | acak ≥ 16 karakter (`openssl rand -hex 24`) | ✅ `cron-secret` |
+
+`DIRECT_URL` tidak dibutuhkan saat runtime (hanya untuk `prisma migrate` dari laptop).
+
+---
+
+## 5. Alur Portal (web)
+
+Ikuti dari atas ke bawah. Langkah bertanda **[T1]** hanya untuk Tahap 1, **[T2]** hanya untuk Tahap 2.
+
+### 5.1 Pilih langganan & siapkan
+
+1. Buka https://portal.azure.com, login dengan akun `@365.ugm.ac.id`.
+2. ⚙️ **Settings → Directories + subscriptions** → pilih direktori langganan tahap ini.
+3. **[T1] Daftarkan resource provider:** cari **Subscriptions** → *Azure for Students* → **Settings → Resource providers** → cari dan **Register** satu per satu: `Microsoft.CognitiveServices`, `Microsoft.App`, `Microsoft.ContainerRegistry`, `Microsoft.OperationalInsights`. Tunggu status *Registered*.
+4. **[T1] Buat resource group:** **Resource groups → Create** → `rg-centsible`, Region **Japan East** → **Review + create → Create**.
+5. **[T2]** Pastikan **Resource groups** menampilkan `Resource_Group_25-27`.
+
+### 5.2 Azure OpenAI
+
+1. Cari **Azure OpenAI → Create**.
+   - Resource group: dari tabel 4 · Region: **UAE North** [T1] / **South India** [T2]
+   - Name: dari tabel 4 · Pricing tier: **Standard S0**
+   - Network: *All networks, including the internet*
+2. **Review + submit → Create**.
+3. Buka resource → **Resource Management → Keys and Endpoint**. Catat **Endpoint** dan **KEY 1** (rahasia: simpan di password manager, jangan di-commit, jangan ditempel di chat).
+
+### 5.3 Cek kuota
+
+1. Di halaman resource klik **Go to Foundry portal** (atau buka https://ai.azure.com dan pilih resource ini).
+2. Menu **Quota** → filter region resource → cari baris `gpt-4.1-mini` dan `gpt-4o-mini-transcribe` (Global Standard). Limit harus > 0.
+3. Kalau STT 0, nanti pakai `whisper` (Standard). Kalau keduanya 0, pakai region lain (T2: `eastus2`/`swedencentral`).
+
+### 5.4 Deploy AI Parse (LLM)
+
+1. Foundry → **Model catalog** → cari **`gpt-4.1-mini`** → **Deploy → Custom settings**:
+   - **Deployment name:** `parse` · **Deployment type:** Global Standard · **Model version:** `2025-04-14`
+   - **Tokens per Minute Rate Limit:** 50K (T1 boleh 10K)
+2. **Deploy**. Kalau kuota tidak cukup, turunkan TPM.
+3. Uji di **Playground → Chat** dengan deployment `parse`: ketik "Balas: ok".
+
+### 5.5 Deploy AI STT
+
+1. **Model catalog** → **`gpt-4o-mini-transcribe`** → **Deploy → Custom settings**:
+   - **Deployment name:** `stt` · **Deployment type:** Global Standard · **Version:** `2025-12-15` · TPM kecil (mis. 10K)
+2. Gagal karena kuota → deploy **`whisper`** (Deployment type **Standard**) dengan nama sama `stt`.
+3. Uji dengan curl di [7.1](#71-uji-ai-langsung).
+
+### 5.6 Container Registry & build image
+
+1. Cari **Container registries → Create** → resource group dari tabel 4, Registry name dari tabel 4, Location **Japan East**, Pricing plan **Basic** → **Review + create → Create**.
+2. Buka registry → **Settings → Access keys** → aktifkan **Admin user**.
+3. Buka **Cloud Shell** (ikon `>_` di bar atas) → **Bash** → *No storage account required* → pilih langganan tahap ini. Jalankan (repo publik, jadi ACR bisa mengambilnya langsung dari GitHub):
+   ```bash
+   az acr build -r <nama-registry> -t centsible:v1 \
+     --build-arg NEXT_PUBLIC_SUPABASE_URL=https://<ref>.supabase.co \
+     --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=sb_publishable_… \
+     https://github.com/gadicandra/Senior-Project_Centsible.git#main
+   ```
+   Tunggu sampai `Run ID: … was successful` (±3–5 menit). Registry → **Repositories** harus berisi `centsible:v1`.
+
+### 5.7 Container App (aplikasi)
+
+1. Cari **Container Apps → Create**.
+2. **Basics:** resource group dari tabel 4 · Name `centsible` · Region **Japan East** · Container Apps environment **Create new** → `cae-centsible` (*Consumption only*).
+3. **Container:** hapus centang *Use quickstart image*.
+   - Image source **Azure Container Registry** → registry, Image `centsible`, Tag `v1`
+   - Authentication **Admin credentials**
+   - CPU and memory **0.5 CPU, 1 Gi**
+   - Environment variables: isi semua env **tanpa** tanda ✅ di tabel 4 (rahasia ditambahkan di langkah 6–7)
+4. **Ingress:** Enabled · *Accepting traffic from anywhere* · Target port **3000**.
+5. **Review + create → Create**.
+6. Buka app → **Settings → Secrets → Add**: `database-url`, `supabase-secret`, `ai-key`, `draft-secret`, `cron-secret` (nilai dari tabel 4).
+7. **Application → Containers → Edit and deploy** → pilih container → **Environment variables** → tambahkan `DATABASE_URL`, `SUPABASE_SECRET_KEY`, `AI_TEXT_API_KEY`, `AI_STT_API_KEY`, `AI_DRAFT_SECRET`, `CRON_SECRET` dengan Source **Reference a secret** → **Save → Create**.
+8. **Application → Scale:** Min replicas sesuai tabel 4, Max **2** → Save.
+9. **Overview → Application Url** → catat (`https://centsible.<acak>.japaneast.azurecontainerapps.io`).
+
+### 5.8 Cron ringkasan mingguan
+
+1. Cari **Container App Jobs → Create** → resource group dari tabel 4 · Name `job-weekly` · Region Japan East · environment `cae-centsible`.
+2. **Trigger type:** Scheduled · Cron expression `0 23 * * 0` (dievaluasi dalam **UTC** = Senin 06:00 WIB).
+3. **Container:** Image source *Docker Hub or other registries* · Public · Registry `docker.io` · Image `curlimages/curl:8.11.1` · 0.25 CPU / 0.5 Gi
+   - **Command override:** `/bin/sh`
+   - **Arguments override:** `-c, curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/weekly"`
+   - Env `APP_URL` = Application Url dari 5.7 langkah 9
+4. **Create**. Lalu job → **Settings → Secrets → Add** `cron-secret`, dan **Configuration → Containers → Edit** → env `CRON_SECRET` = *Reference a secret* `cron-secret`.
+5. Job → **Run now** → **Execution history** harus *Succeeded*.
+
+### 5.9 Supabase & budget
+
+1. **Supabase** (project dev [T1] / production [T2]) → **Authentication → URL Configuration → Redirect URLs** → tambahkan `https://<Application Url>/**`.
+2. **Budget:** Portal → **Cost Management → Budgets** → Scope = resource group dari tabel 4 → **Add** → US$20, Monthly → alert Actual 50%, 80%, 100% ke email kamu.
+
+Lanjut ke [7. Uji coba setelah deploy](#7-uji-coba-setelah-deploy).
+
+---
+
+## 6. Alur Azure CLI
+
+Bisa di terminal laptop (dari root repo) atau di Cloud Shell.
+
+### 6.1 Login, langganan, variabel
+
+```bash
+az login                                   # T2: az login --tenant <tenant DTETI>
+az account list --all -o table
+az extension add --name containerapp --upgrade
+```
+
+**[T1] Azure for Students:**
+```bash
+az account set --subscription "Azure for Students"
+for p in Microsoft.CognitiveServices Microsoft.App Microsoft.ContainerRegistry Microsoft.OperationalInsights; do
+  az provider register -n $p --wait
+done
+RG=rg-centsible
+az group create -n $RG -l japaneast
+AI=centsible-ai-<inisial>-trial; AI_LOC=uaenorth
+ACR=centsibletrial$RANDOM
+MIN_REPLICAS=0
+```
+
+**[T2] DTETI-LabIT:**
+```bash
+az account set --subscription "DTETI-LabIT"
+RG=Resource_Group_25-27                    # sudah ada; jangan membuat RG baru
+AI=centsible-ai-<inisial>; AI_LOC=southindia
+ACR=centsibleacr$RANDOM
+MIN_REPLICAS=1
+```
+
+**Keduanya:**
+```bash
+APP_LOC=japaneast
+SUPABASE_URL=https://<ref>.supabase.co
+SUPABASE_PUBLISHABLE=sb_publishable_…
+echo "ACR=$ACR"                            # catat, dipakai lagi saat update
+```
+
+### 6.2 Azure OpenAI
+
+```bash
+az cognitiveservices account create -g $RG -n $AI -l $AI_LOC \
+  --kind OpenAI --sku S0 --custom-domain $AI --yes
+AI_KEY=$(az cognitiveservices account keys list -g $RG -n $AI --query key1 -o tsv)
+AI_URL=https://$AI.openai.azure.com/openai/v1/
+```
+
+### 6.3 Cek ketersediaan & kuota
+
+```bash
+az cognitiveservices model list -l $AI_LOC \
+  --query "[?model.name=='gpt-4.1-mini' || model.name=='gpt-4o-mini-transcribe' || model.name=='whisper'].{model:model.name, versi:model.version, sku:join(',', model.skus[].name)}" -o table
+
+# T1 saja (T2 tidak punya izin level langganan):
+az cognitiveservices usage list -l $AI_LOC \
+  --query "[?contains(name.value,'gpt-4.1-mini') || contains(name.value,'transcribe') || contains(name.value,'whisper')].{kuota:name.value, limit:limit}" -o table
+```
+
+### 6.4 Deploy AI Parse (LLM)
+
+```bash
+az cognitiveservices account deployment create -g $RG -n $AI \
+  --deployment-name parse \
+  --model-name gpt-4.1-mini --model-version 2025-04-14 --model-format OpenAI \
+  --sku-name GlobalStandard --sku-capacity 50          # 50K TPM; InsufficientQuota → 10
+
+curl -s ${AI_URL}chat/completions -H "Content-Type: application/json" -H "api-key: $AI_KEY" \
+  -d '{"model":"parse","messages":[{"role":"user","content":"Balas: ok"}],"max_tokens":5}'
+```
+
+### 6.5 Deploy AI STT
+
+```bash
+az cognitiveservices account deployment create -g $RG -n $AI \
+  --deployment-name stt \
+  --model-name gpt-4o-mini-transcribe --model-version 2025-12-15 --model-format OpenAI \
+  --sku-name GlobalStandard --sku-capacity 10
+
+# Cadangan kalau gagal karena kuota:
+# az cognitiveservices account deployment create -g $RG -n $AI --deployment-name stt \
+#   --model-name whisper --model-version 001 --model-format OpenAI --sku-name Standard --sku-capacity 1
+
+az cognitiveservices account deployment list -g $RG -n $AI \
+  --query "[].{nama:name, model:properties.model.name, status:properties.provisioningState}" -o table
+```
+
+### 6.6 Container Registry & build image
+
+```bash
+az acr create -g $RG -n $ACR -l $APP_LOC --sku Basic --admin-enabled true
+TAG=$(git rev-parse --short HEAD)
+az acr build -r $ACR -t centsible:$TAG \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL=$SUPABASE_URL \
+  --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE .
+```
+
+### 6.7 Container Apps environment & aplikasi
+
+```bash
+az containerapp env create -g $RG -n cae-centsible -l $APP_LOC
+```
+
+Pilih cara menarik image:
+```bash
+# [T1] managed identity (tanpa password; butuh izin role assignment, kamu pemilik langganan)
+PULL="--registry-server $ACR.azurecr.io --registry-identity system"
+
+# [T2] admin user ACR (DTETI-LabIT tidak mengizinkan role assignment)
+ACR_PASS=$(az acr credential show -n $ACR --query "passwords[0].value" -o tsv)
+PULL="--registry-server $ACR.azurecr.io --registry-username $ACR --registry-password $ACR_PASS"
 ```
 
 ```bash
-pnpm dev
+az containerapp create -g $RG -n centsible --environment cae-centsible \
+  --image $ACR.azurecr.io/centsible:$TAG $PULL \
+  --target-port 3000 --ingress external \
+  --min-replicas $MIN_REPLICAS --max-replicas 2 --cpu 0.5 --memory 1Gi \
+  --secrets \
+     database-url='<DATABASE_URL>' supabase-secret='<SUPABASE_SECRET_KEY>' \
+     ai-key="$AI_KEY" draft-secret='<AI_DRAFT_SECRET>' cron-secret='<CRON_SECRET>' \
+  --env-vars \
+     NEXT_PUBLIC_SUPABASE_URL=$SUPABASE_URL NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE \
+     DATABASE_URL=secretref:database-url SUPABASE_SECRET_KEY=secretref:supabase-secret \
+     AI_TEXT_PROVIDER=openai-compatible AI_TEXT_BASE_URL=$AI_URL AI_TEXT_MODEL=parse AI_TEXT_API_KEY=secretref:ai-key \
+     AI_STT_ENABLED=true AI_STT_BASE_URL=$AI_URL AI_STT_MODEL=stt AI_STT_API_KEY=secretref:ai-key \
+     AI_DRAFT_SECRET=secretref:draft-secret AI_PARSE_DAILY_LIMIT=100 CRON_SECRET=secretref:cron-secret
+
+APP=https://$(az containerapp show -g $RG -n centsible --query properties.configuration.ingress.fqdn -o tsv)
+echo $APP
 ```
 
-1. **Parse:** tekan **+**, ketik *"bayar kos 850k senin lalu via bca"* → kartu konfirmasi Rp 850.000 · Kos.
-2. **STT:** tekan mikrofon, ucapkan *"makan siang dua puluh lima ribu"* → teks muncul, lalu kartu Rp 25.000 · Makan.
-3. **Akurasi:** `pnpm eval:ai`, lalu commit `eval/results/parse.md`. Target **≥ 85%** nominal dan kategori (hasil sebelumnya, Claude Haiku 4.5: 88,9%).
-4. **Ringkasan AI:** `curl -H "Authorization: Bearer <CRON_SECRET>" http://localhost:3000/api/cron/weekly` → `"ai": 1` atau lebih.
+> Tanda kutip tunggal `'…'` mencegah shell mengubah karakter khusus di rahasia. Perintah ini tersimpan di riwayat shell; jalankan `history -c` setelahnya kalau memakai laptop bersama.
 
-Uji STT tanpa aplikasi (rekaman `.wav`/`.webm`/`.mp3`, maks 25 MB):
+### 6.8 Cron ringkasan mingguan
+
 ```bash
-curl https://centsible-ai-gac.openai.azure.com/openai/v1/audio/transcriptions -H "api-key: <KEY 1>" \
+az containerapp job create -g $RG -n job-weekly --environment cae-centsible \
+  --trigger-type Schedule --cron-expression "0 23 * * 0" \
+  --replica-timeout 300 --replica-retry-limit 1 --parallelism 1 --replica-completion-count 1 \
+  --image curlimages/curl:8.11.1 --cpu 0.25 --memory 0.5Gi \
+  --secrets cron-secret='<CRON_SECRET>' --env-vars CRON_SECRET=secretref:cron-secret APP_URL=$APP \
+  --command "/bin/sh" --args "-c" 'curl -fsS -H "Authorization: Bearer $CRON_SECRET" "$APP_URL/api/cron/weekly"'
+
+az containerapp job start -g $RG -n job-weekly
+az containerapp job execution list -g $RG -n job-weekly -o table      # Succeeded
+```
+
+### 6.9 Supabase & budget
+
+1. Supabase → **Authentication → URL Configuration → Redirect URLs** → tambahkan `$APP/**` (dashboard; tidak ada perintah CLI Azure untuk ini).
+2. Budget di scope resource group:
+   ```bash
+   az consumption budget create --resource-group $RG --budget-name centsible-20usd \
+     --amount 20 --category cost --time-grain monthly \
+     --start-date $(date +%Y-%m-01) --end-date $(date -d '+1 year' +%Y-%m-01)
+   ```
+   Alert email ditambahkan di Portal → Cost Management → Budgets → `centsible-20usd`.
+
+---
+
+## 7. Uji coba setelah deploy
+
+### 7.1 Uji AI langsung
+
+```bash
+# Parse
+curl -s ${AI_URL}chat/completions -H "Content-Type: application/json" -H "api-key: $AI_KEY" \
+  -d '{"model":"parse","messages":[{"role":"user","content":"Balas: ok"}],"max_tokens":5}'
+
+# STT (rekaman .wav/.webm/.mp3, maks 25 MB) → {"text":"..."}
+curl -s ${AI_URL}audio/transcriptions -H "api-key: $AI_KEY" \
   -F file=@rekaman.wav -F model=stt -F language=id -F "prompt=gocap, ceban, goceng, 25rb, kos"
-# → {"text":"..."}
 ```
+
+### 7.2 Uji aplikasi di URL Container App
+
+1. Buka `https://<Application Url>`, daftar/login (Google dan email). Login gagal → cek Redirect URL Supabase.
+2. **Parse:** tekan **+**, ketik *"bayar kos 850k senin lalu via bca"* → kartu konfirmasi Rp 850.000 · Kos → simpan.
+3. **STT:** tekan mikrofon di HP, ucapkan *"makan siang dua puluh lima ribu"* → kartu Rp 25.000 · Makan.
+4. **Form manual & offline:** catat satu transaksi dengan mode pesawat, lalu nyalakan lagi → tersinkron.
+5. **Cron:** `curl -H "Authorization: Bearer <CRON_SECRET>" $APP/api/cron/weekly` → JSON berisi `"ai": 1` atau lebih bila ada transaksi minggu lalu.
+6. **Log:** Portal → Container App → **Monitoring → Log stream**, atau
+   ```bash
+   az containerapp logs show -g $RG -n centsible --follow
+   ```
+   Tidak boleh ada `ai_fallback` dengan `code: "env"` maupun error 5xx.
+7. **Akurasi (laptop):** arahkan `.env.local` ke Azure (env AI di tabel 4), jalankan `pnpm eval:ai`, lalu commit `eval/results/parse.md`. Target **≥ 85%** (sebelumnya 88,9% dengan Claude Haiku 4.5).
+
+**Tahap 1 selesai** kalau 7.1–7.2 lulus. Catat masalah yang ditemui, lalu lanjut ke Tahap 2.
 
 ---
 
-## 8. Nyalakan di Production
+## 8. Pindah ke produksi (Tahap 2) & cutover dari Vercel
 
-### 8.1 Vercel (Tingkat A)
-
-1. Vercel → project → **Settings → Environment Variables**, tambahkan untuk **Preview** dulu:
-
-   | Nama | Nilai | Sensitif |
-   |---|---|---|
-   | `AI_TEXT_PROVIDER` | `openai-compatible` | |
-   | `AI_TEXT_BASE_URL` | `https://centsible-ai-gac.openai.azure.com/openai/v1/` | |
-   | `AI_TEXT_MODEL` | `parse` | |
-   | `AI_TEXT_API_KEY` | KEY 1 | ✅ |
-   | `AI_STT_ENABLED` | `true` | |
-   | `AI_STT_BASE_URL` | `https://centsible-ai-gac.openai.azure.com/openai/v1/` | |
-   | `AI_STT_MODEL` | `stt` | |
-   | `AI_STT_API_KEY` | KEY 1 | ✅ |
-
-   `AI_DRAFT_SECRET`, `AI_PARSE_DAILY_LIMIT`, dan `CRON_SECRET` sudah ada, jadi jangan diubah.
-2. **Redeploy Preview** (env baru hanya terbaca saat build): Deployments → ⋯ → **Redeploy**.
-3. Uji di URL Preview: kalimat, suara (izinkan mikrofon), dan form manual.
-4. Ulangi untuk **Production**, lalu redeploy.
-5. **Smoke test:** 3 transaksi lewat kalimat dan 1 lewat suara dari HP. Di Vercel **Logs** tidak boleh ada `ai_fallback` `code: "env"` maupun 5xx. Senin berikutnya cek kartu "Ringkasan minggu lalu".
+1. **Izin:** pastikan admin lab menyetujui pemakaian `Resource_Group_25-27` dan siapa yang menanggung biaya.
+2. **Ulangi bagian 5 atau 6** dengan kolom **Tahap 2** di tabel 4 (Supabase **production**).
+3. **Uji** seperti bagian 7 di URL Container App produksi.
+4. **Cutover:**
+   - Bagikan URL Container App produksi ke pengguna uji coba (#37).
+   - **Matikan Vercel Cron** supaya ringkasan tidak dibuat dua kali: PR yang menghapus blok `crons` dari `vercel.json`. Vercel boleh tetap hidup sebagai cadangan selama 1–2 minggu.
+   - (Opsional) domain kustom: Container App → **Networking → Custom domains** → *Add custom domain* dengan sertifikat terkelola; tambahkan juga ke Redirect URL Supabase.
+5. **Matikan Tahap 1** untuk menghemat kredit (bagian 12).
 6. Tutup issue **#28** (suara) dan **#32** (ringkasan AI) dengan hasil uji.
 
-### 8.2 Pindah ke Tingkat B
+---
 
-1. **Supabase → Authentication → URL Configuration:** tambahkan `https://<fqdn-centsible>/**`. Ubah *Site URL* kalau domain utama pindah.
-2. Ulangi smoke test 8.1 langkah 5 di URL Container App.
-3. **Matikan Vercel Cron** supaya ringkasan tidak dibuat dua kali: hapus blok `crons` di `vercel.json` lewat PR.
-4. (Opsional) CI/CD: job GitHub Actions yang menjalankan `az acr build` lalu `az containerapp update --image …:$SHA` setelah tes lulus, login dengan OIDC (`azure/login`).
+## 9. Update versi aplikasi
+
+Setiap ada perubahan di `main`:
+
+**Portal:** Cloud Shell → `az acr build -r <registry> -t centsible:v2 … https://github.com/gadicandra/Senior-Project_Centsible.git#main` → Container App → **Containers → Edit and deploy** → pilih tag `v2` → **Create**. Revisi baru menggantikan yang lama tanpa downtime.
+
+**CLI:**
+```bash
+TAG=$(git rev-parse --short HEAD)
+az acr build -r $ACR -t centsible:$TAG \
+  --build-arg NEXT_PUBLIC_SUPABASE_URL=$SUPABASE_URL --build-arg NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY=$SUPABASE_PUBLISHABLE .
+az containerapp update -g $RG -n centsible --image $ACR.azurecr.io/centsible:$TAG
+az containerapp revision list -g $RG -n centsible -o table
+```
+
+**Otomatis (opsional):** tambahkan job di `.github/workflows/main.yml` yang menjalankan dua perintah di atas setelah tes lulus di `main`, dengan login OIDC (`azure/login`). Di DTETI-LabIT, pembuatan *service principal/federated credential* untuk OIDC butuh bantuan admin.
 
 ---
 
-## 9. Biaya & pengaman
+## 10. Biaya & pengaman
 
-| Item | Perkiraan uji coba (±10–20 pengguna, 14 hari) |
+| Item | Perkiraan (±10–20 pengguna) |
 |---|---|
 | `gpt-4.1-mini` (parse + ringkasan) | ±1–2 ribu token per kalimat; ratusan kalimat per hari tetap < ±US$1/hari |
-| `gpt-4o-mini-transcribe` | Dihitung per durasi audio; rekaman ≤ 30 detik → sangat kecil |
-| Container Apps (Tingkat B) | Gratis per langganan per bulan: 180.000 vCPU-detik, 360.000 GiB-detik, 2 juta request. Aplikasi 0,5 vCPU dengan min 1 replika melewati kuota gratis setelah ±4 hari, sisanya kecil |
+| `gpt-4o-mini-transcribe` | Per durasi audio; rekaman ≤ 30 detik → sangat kecil |
+| Container Apps | Gratis per langganan per bulan: 180.000 vCPU-detik, 360.000 GiB-detik, 2 juta request. Aplikasi 0,5 vCPU min 1 replika melewati kuota gratis setelah ±4 hari; min 0 (T1) hampir gratis |
+| Job mingguan | Beberapa detik per minggu → praktis gratis |
 | ACR Basic | Beberapa dolar per bulan |
+| Log Analytics (dibuat otomatis oleh environment) | Per GB log; kecil untuk trafik uji coba |
 
-Angka di atas perkiraan; hitung ulang di *Azure Pricing Calculator* dan pantau **Cost Management → Cost analysis** (scope RG).
+Angka di atas perkiraan; pantau **Cost Management → Cost analysis** (scope RG) setiap beberapa hari.
 
-**Pengaman:** `AI_PARSE_DAILY_LIMIT=100` per pengguna per hari (parse + suara), TPM deployment yang kecil, dan budget alert US$20.
+**Pengaman:** `AI_PARSE_DAILY_LIMIT=100` per pengguna per hari (parse + suara), TPM deployment kecil, budget alert US$20, dan matikan Tahap 1 setelah selesai.
 
 ---
 
-## 10. Masalah umum
+## 11. Masalah umum
 
 | Gejala | Penyebab | Solusi |
 |---|---|---|
-| `AuthorizationFailed` di level langganan | Akses DTETI-LabIT hanya di RG | Selalu sertakan `-g Resource_Group_25-27`; jangan membuat RG baru |
-| `RequestDisallowedByPolicy` | Region di luar daftar (khusus Students) | Pakai `japaneast` / `uaenorth` |
-| `InsufficientQuota` saat deploy model | Kuota model di region itu kurang/0 | Turunkan TPM; STT coba `whisper` Standard; atau region lain (`eastus2`, `swedencentral`) |
-| `--registry-identity system` gagal (role assignment) | Akun tidak boleh membuat *role assignment* | Pakai admin user ACR (5.8) |
-| Kalimat selalu ke form manual, log `ai_fallback` `code: "env"` | Env belum terbaca | Cek ejaan, lalu **redeploy** |
-| Log `invalid_env` `AI_TEXT_BASE_URL` | URL bukan https / salah format | Harus `https://…/openai/v1/` |
+| `RequestDisallowedByPolicy` (T1) | Region di luar daftar policy Students | Pakai `japaneast` / `uaenorth` |
+| `MissingSubscriptionRegistration` (T1) | Resource provider belum terdaftar | 5.1 langkah 3 / 6.1 |
+| `AuthorizationFailed` di level langganan (T2) | Akses DTETI-LabIT hanya di RG | Selalu pakai `-g Resource_Group_25-27`; jangan buat RG baru |
+| Gagal membuat *role assignment* / `--registry-identity system` (T2) | Akun tidak boleh membuat role assignment | Pakai admin user ACR (6.7 [T2]) |
+| `InsufficientQuota` saat deploy model | Kuota model di region itu kurang/0 | Turunkan TPM; STT pakai `whisper` Standard; atau region lain |
+| `az acr build` gagal di `pnpm install` | `pnpm-lock.yaml` tidak sinkron | `pnpm install` di laptop, commit lockfile |
+| Container App *Activating* lalu gagal; log `Cannot find module` | Dockerfile/`output: "standalone"` belum ter-merge | Cek bagian 3 sudah di `main`, build ulang |
+| Halaman kosong / Supabase error di browser | `NEXT_PUBLIC_*` tidak diberikan saat **build** | Ulangi `az acr build` dengan `--build-arg` |
+| Login gagal / redirect ke Vercel | Redirect URL Supabase belum ditambahkan | 5.9 / 6.9 |
+| Kalimat selalu ke form manual, log `ai_fallback` `code: "env"` | Env AI belum ada/salah ejaan | Cek env di Container App, simpan → revisi baru |
 | 404 `DeploymentNotFound` | Env berisi nama model | Isi **nama deployment** (`parse`, `stt`) |
 | 400 `unsupported_parameter` (`max_tokens`/`temperature`) | Deployment memakai model *reasoning* (`gpt-5*`, `o*`) | Pakai `gpt-4.1-mini`. Kalau harus GPT-5: di `src/server/ai/providers/openai-compatible.ts` dan `src/server/ai/weekly.ts` ganti `max_tokens` → `max_completion_tokens` (±2000), hapus `temperature`, tambah `reasoning_effort` (`"minimal"` untuk `gpt-5-mini`, `"none"` untuk 5.1+), lalu `pnpm eval:ai` |
-| 401 | Kunci salah / `AI_STT_API_KEY` kosong | Isi KEY 1 di kedua env kunci |
+| 401 dari AI | Kunci salah / secret `ai-key` kosong | Perbarui secret, lalu restart revisi |
 | 429 | TPM deployment habis | Naikkan rate limit (Foundry → Deployments → Edit) atau tunggu 1 menit |
-| STT 404 | Deployment `stt` belum *Succeeded* atau salah resource | `az cognitiveservices account deployment list …` |
-| Ringkasan mingguan masih templat (`"ai": 0`) | AI gagal / env tidak terbaca di job | Cek log, lalu curl cron (bagian 7) |
-| Login gagal di Container App | Redirect URL belum ditambahkan | 8.2 langkah 1 |
+| Cron job *Failed* | `APP_URL` salah atau `CRON_SECRET` beda dengan aplikasi | Samakan secret; `az containerapp job execution list` |
+| Permintaan pertama lambat (T1) | Min replicas 0 (*cold start*) | Wajar untuk uji coba; T2 memakai min 1 |
+| Resource berhenti mendadak (T1) | Kredit Students habis | Cek saldo di https://www.microsoftazuresponsorships.com/balance |
 
 ---
 
-## 11. Rollback & bersih-bersih
+## 12. Rollback & bersih-bersih
 
-- **Tingkat A:** di Vercel kosongkan `AI_TEXT_PROVIDER` dan isi `AI_STT_ENABLED=false`, lalu redeploy. Aplikasi kembali ke form manual; tidak ada data yang hilang.
-- **Tingkat B:** aktifkan lagi Vercel Cron dan arahkan pengguna kembali ke URL Vercel.
-- **Hapus resource setelah uji coba.** RG departemen **tidak boleh dihapus**, jadi hapus isinya saja:
-  - Portal: buka `Resource_Group_25-27` → centang resource Centsible → **Delete**.
+- **Rollback aplikasi:** arahkan pengguna kembali ke URL Vercel dan kembalikan blok `crons` di `vercel.json`. Data pengguna tetap di Supabase, jadi tidak ada yang hilang.
+- **Rollback versi di Container Apps:** Container App → **Revisions and replicas** → aktifkan revisi lama, atau `az containerapp update --image …:<tag-lama>`.
+- **Hapus Tahap 1 (Azure for Students):**
+  - Portal: Resource groups → `rg-centsible` → **Delete resource group**.
+  - CLI: `az group delete -n rg-centsible --yes`, lalu `az cognitiveservices account purge -g rg-centsible -n <nama> -l uaenorth` kalau nama Azure OpenAI ingin dipakai lagi (resource yang dihapus masuk *soft-delete* 48 jam).
+- **Hapus Tahap 2 (DTETI-LabIT):** RG **tidak boleh dihapus**, jadi hapus isinya:
+  - Portal: `Resource_Group_25-27` → centang resource Centsible → **Delete**.
   - CLI:
     ```bash
     az containerapp job delete -g $RG -n job-weekly --yes
@@ -560,18 +610,15 @@ Angka di atas perkiraan; hitung ulang di *Azure Pricing Calculator* dan pantau *
     az containerapp env delete -g $RG -n cae-centsible --yes
     az acr delete -g $RG -n $ACR --yes
     az cognitiveservices account delete -g $RG -n $AI
-    az resource list -g $RG -o table      # sisa, mis. Log Analytics workspace dari environment
+    az resource list -g $RG -o table      # sisa, mis. Log Analytics workspace
     ```
-  - Resource Azure OpenAI yang dihapus masuk *soft-delete* selama 48 jam; namanya baru bisa dipakai lagi setelah di-*purge* (`az cognitiveservices account purge`), yang mungkin butuh bantuan admin karena scope-nya level langganan.
-- Langganan Students (cadangan): `az group delete -n rg-centsible --yes`.
-
-Data pengguna tetap di Supabase, jadi rollback tidak berisiko kehilangan data.
+- Ingat juga App Service B1 `passgo` di Azure for Students yang terus memotong kredit.
 
 ---
 
-## 12. Sumber & verifikasi
+## 13. Sumber & verifikasi
 
-Data langganan (bagian 1) dari Azure CLI 2.93.0 pada 27 Nov 2026. Klaim lain dicek ke Microsoft Learn, OpenAI, dan Speaches lewat Context7.
+Data langganan (bagian 1) dari Azure CLI pada 27 Nov 2026. Klaim lain dicek ke Microsoft Learn dan OpenAI lewat Context7.
 
 | Klaim | Status | Sumber |
 |---|---|---|
@@ -579,14 +626,13 @@ Data langganan (bagian 1) dari Azure CLI 2.93.0 pada 27 Nov 2026. Klaim lain dic
 | `/openai/v1/audio/transcriptions` menerima `file`, `model`, `language`, `prompt`, `response_format` | ✅ | REST reference Azure OpenAI |
 | `az cognitiveservices account create --kind OpenAI --sku S0 --custom-domain` | ✅ | Quickstart Azure OpenAI (CLI) |
 | `az cognitiveservices account deployment create … --sku-name GlobalStandard --sku-capacity` | ✅ | *Automate quota deployments* |
-| Ketersediaan model per region | ✅ dicek langsung di langganan | `az cognitiveservices model list` |
-| Quota tier Tier 0 dan larangan tambah kuota | ✅ | *Azure OpenAI quotas and limits* |
-| Kredit ≠ kuota; deploy gagal bila kuota 0 | ✅ | *Manage Azure OpenAI quota* |
+| Ketersediaan model per region | ✅ dicek langsung di kedua langganan | `az cognitiveservices model list` |
+| Quota tier Tier 0 & larangan tambah kuota; kredit ≠ kuota | ✅ | *Azure OpenAI quotas and limits* |
 | Reasoning models: `max_completion_tokens`, tanpa `temperature` | ✅ | *Reasoning models* |
-| `--registry-identity system` membuat *role assignment* `AcrPull` | ✅ | Container Apps managed identity image pull |
-| Admin user ACR (`--registry-username/--registry-password`) | ✅ | `az containerapp create` reference |
-| `--secrets` + `secretref:`; jobs `--trigger-type Schedule`, cron dalam UTC | ✅ | Container Apps secrets / jobs |
-| `az acr build` dari URL GitHub (`…git#main`) | ✅ | ACR Tasks quickstart |
+| `--registry-identity system` membuat role assignment `AcrPull`; alternatif `--registry-username/--registry-password` | ✅ | Container Apps image pull / `az containerapp create` |
+| Portal Container Apps: image dari ACR, Ingress target port, Secrets + *Reference a secret* | ✅ | Container Apps quickstart (portal), Manage secrets |
+| Jobs `--trigger-type Schedule`, cron dalam **UTC**, `job start`, `execution list` | ✅ | *Jobs in Azure Container Apps* |
+| `az acr build` dari URL GitHub (`…git#main`) dan dari folder lokal | ✅ | ACR Tasks quickstart |
 | Kuota gratis Container Apps (180K vCPU-s, 360K GiB-s, 2 juta request) | ✅ | Container Apps billing |
 | Budget di scope resource group | ✅ | Cost Management budgets |
 
