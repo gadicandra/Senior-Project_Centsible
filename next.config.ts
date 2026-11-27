@@ -1,6 +1,7 @@
 import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
+  output: "standalone",
   async headers() {
     // Service Worker harus selalu diambil ulang, supaya versi baru langsung terpasang.
     return [
