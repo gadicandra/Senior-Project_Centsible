@@ -17,7 +17,7 @@ Setiap tahap bisa dikerjakan lewat salah satu dari dua alur yang hasilnya sama:
 - **[Alur Portal](#5-alur-portal-web)**: browser, https://portal.azure.com dan https://ai.azure.com
 - **[Alur CLI](#6-alur-azure-cli)**: Azure CLI, bisa disalin sebagai skrip
 
-> **Kode aplikasi tidak perlu diubah.** Azure OpenAI punya **API v1** yang kompatibel dengan OpenAI (`https://<resource>.openai.azure.com/openai/v1/`), dan Centsible sudah memakai jalur `openai-compatible` untuk AI teks dan Whisper. Yang ditambahkan hanya berkas Docker (bagian 3). Jangan isi `AI_TEXT_PROVIDER=azure`; nilai itu dicadangkan untuk login tanpa kunci dan belum diimplementasikan.
+> **Kode aplikasi tidak perlu diubah.** Model AI di-deploy di **Microsoft Foundry resource**, yang menyediakan endpoint Azure OpenAI **API v1** yang kompatibel dengan OpenAI (`https://<resource>.openai.azure.com/openai/v1/`), dan Centsible sudah memakai jalur `openai-compatible` untuk AI teks dan Whisper. Yang ditambahkan hanya berkas Docker (bagian 3). Jangan isi `AI_TEXT_PROVIDER=azure`; nilai itu dicadangkan untuk login tanpa kunci dan belum diimplementasikan.
 
 ## Daftar isi
 
@@ -92,7 +92,7 @@ Dicek dengan Azure CLI 2.93.0 pada **27 November 2026**. Akun kampus terhubung k
 ```
 Browser ─► Container App "centsible" (japaneast) ──► Supabase (Tokyo)
                  │
-                 └──► Azure OpenAI (uaenorth / southindia)
+                 └──► Foundry resource (uaenorth / southindia), endpoint …openai.azure.com/openai/v1/
                         ├─ deployment "parse"  (gpt-4.1-mini)       ◄── juga dipakai ringkasan mingguan
                         └─ deployment "stt"    (gpt-4o-mini-transcribe)
 
@@ -102,6 +102,7 @@ Container Registry "centsibleacr…" ─► image centsible:<tag>
 
 | Keputusan | Pilihan | Alasan |
 |---|---|---|
+| Jenis resource AI | **Foundry resource** (`kind: AIServices`) + satu *project* | Tipe utama Microsoft untuk resource baru. Tetap punya endpoint `https://<nama>.openai.azure.com/openai/v1/`, jadi env Centsible sama. Azure OpenAI resource biasa (`kind: OpenAI`) masih jalan, tetapi hanya bisa dibuka di Foundry *(classic)*, bukan portal Foundry baru |
 | Hosting aplikasi | **Azure Container Apps** (Consumption) di `japaneast` | Satu region dengan Supabase; aplikasi sangat sering bolak-balik ke database |
 | Region Azure OpenAI | Tahap 1 **`uaenorth`**, Tahap 2 **`southindia`** | Satu-satunya region yang (diizinkan dan) punya model parse **dan** STT, jadi cukup satu resource dan satu kunci. Tambahan latensi ±100–200 ms, jauh di bawah timeout 8 detik |
 | Model parse | **`gpt-4.1-mini` 2025-04-14**, Global Standard | Bukan model *reasoning*, jadi `temperature`/`max_tokens` di kode tetap valid; mendukung *structured outputs* |
@@ -202,7 +203,8 @@ Ganti `<inisial>` dengan inisial kamu (mis. `gac`) dan `<angka>` dengan angka ac
 | Langganan | `Azure for Students` | `DTETI-LabIT` |
 | Resource group | `rg-centsible` (**buat baru**, Japan East) | `Resource_Group_25-27` (**sudah ada**, jangan buat baru) |
 | Daftarkan resource provider | **Ya** (langkah 5.1 / 6.1) | Tidak perlu |
-| Azure OpenAI | `centsible-ai-<inisial>-trial` di **UAE North** | `centsible-ai-<inisial>` di **South India** |
+| Foundry resource | `centsible-ai-<inisial>-trial` di **UAE North** | `centsible-ai-<inisial>` di **South India** |
+| Foundry project | `centsible` | `centsible` |
 | Container Registry | `centsibletrial<angka>` (Japan East, Basic) | `centsibleacr<angka>` (Japan East, Basic) |
 | Container Apps environment | `cae-centsible` (Japan East) | `cae-centsible` (Japan East) |
 | Container App / Job | `centsible` / `job-weekly` | `centsible` / `job-weekly` |
@@ -218,13 +220,13 @@ Ganti `<inisial>` dengan inisial kamu (mis. `gac`) dan `<angka>` dengan angka ac
 | `DATABASE_URL` | Connection string Supabase (pooler) | ✅ `database-url` |
 | `SUPABASE_SECRET_KEY` | `sb_secret_…` | ✅ `supabase-secret` |
 | `AI_TEXT_PROVIDER` | `openai-compatible` | |
-| `AI_TEXT_BASE_URL` | `https://<nama-azure-openai>.openai.azure.com/openai/v1/` | |
+| `AI_TEXT_BASE_URL` | `https://<nama-foundry-resource>.openai.azure.com/openai/v1/` | |
 | `AI_TEXT_MODEL` | `parse` (nama **deployment**) | |
-| `AI_TEXT_API_KEY` | KEY 1 Azure OpenAI | ✅ `ai-key` |
+| `AI_TEXT_API_KEY` | KEY 1 Foundry resource | ✅ `ai-key` |
 | `AI_STT_ENABLED` | `true` | |
 | `AI_STT_BASE_URL` | sama dengan `AI_TEXT_BASE_URL` | |
 | `AI_STT_MODEL` | `stt` (nama **deployment**) | |
-| `AI_STT_API_KEY` | KEY 1 Azure OpenAI | ✅ `ai-key` |
+| `AI_STT_API_KEY` | KEY 1 Foundry resource | ✅ `ai-key` |
 | `AI_DRAFT_SECRET` | acak ≥ 32 karakter (`openssl rand -base64 32`) | ✅ `draft-secret` |
 | `AI_PARSE_DAILY_LIMIT` | `100` | |
 | `CRON_SECRET` | acak ≥ 16 karakter (`openssl rand -hex 24`) | ✅ `cron-secret` |
@@ -245,19 +247,24 @@ Ikuti dari atas ke bawah. Langkah bertanda **[T1]** hanya untuk Tahap 1, **[T2]*
 4. **[T1] Buat resource group:** **Resource groups → Create** → `rg-centsible`, Region **Japan East** → **Review + create → Create**.
 5. **[T2]** Pastikan **Resource groups** menampilkan `Resource_Group_25-27`.
 
-### 5.2 Azure OpenAI
+### 5.2 Foundry resource & project
 
-1. Cari **Azure OpenAI → Create**.
-   - Resource group: dari tabel 4 · Region: **UAE North** [T1] / **South India** [T2]
-   - Name: dari tabel 4 · Pricing tier: **Standard S0**
-   - Network: *All networks, including the internet*
-2. **Review + submit → Create**.
-3. Buka resource → **Resource Management → Keys and Endpoint**. Catat **Endpoint** dan **KEY 1** (rahasia: simpan di password manager, jangan di-commit, jangan ditempel di chat).
+1. Buka https://ai.azure.com (Microsoft Foundry) dan pastikan toggle **New Foundry** menyala.
+2. **Create new** (atau dari pemilih project di kiri atas: **Create new project**):
+   - Project name: `centsible`
+   - **Advanced options:** Subscription dan Resource group dari tabel 4 · Foundry resource: **Create new** → nama dari tabel 4 · Region: **UAE North** [T1] / **South India** [T2]
+3. **Create**, tunggu ±1–2 menit. Foundry membuat *resource* dan *project* sekaligus.
+4. Ambil kunci: Portal Azure → resource Foundry (tipe *Foundry*) → **Resource Management → Keys and Endpoint**. Catat **KEY 1** (rahasia: simpan di password manager, jangan di-commit, jangan ditempel di chat).
+   - Di halaman yang sama ada beberapa endpoint. Yang dipakai Centsible adalah tab **OpenAI** / **Azure OpenAI**: `https://<nama>.openai.azure.com/`. Base URL = endpoint itu + `openai/v1/`.
+
+> Alternatif lewat Portal Azure: cari **Microsoft Foundry → Create** (bukan "Azure OpenAI"). Isian sama: resource group, region, nama, lalu buat project di tab berikutnya.
+>
+> **Sudah terlanjur membuat Azure OpenAI resource?** Tidak perlu dihapus. Portal Azure → resource → **Overview** → banner *"Want to try the latest industry models and Agents?"* → **Get Started** → konfirmasi. Tipe resource berubah menjadi Foundry; endpoint dan kunci tetap. Setelah itu buat project lewat https://ai.azure.com.
 
 ### 5.3 Cek kuota
 
-1. Di halaman resource klik **Go to Foundry portal** (atau buka https://ai.azure.com dan pilih resource ini).
-2. Menu **Quota** → filter region resource → cari baris `gpt-4.1-mini` dan `gpt-4o-mini-transcribe` (Global Standard). Limit harus > 0.
+1. Di Foundry, buka halaman **Quota** (letaknya di menu manajemen/*Operate*; nama menu bisa sedikit berbeda antar versi portal).
+2. Di halaman **Quota** → filter region resource → cari baris `gpt-4.1-mini` dan `gpt-4o-mini-transcribe` (Global Standard). Limit harus > 0.
 3. Kalau STT 0, nanti pakai `whisper` (Standard). Kalau keduanya 0, pakai region lain (T2: `eastus2`/`swedencentral`).
 
 ### 5.4 Deploy AI Parse (LLM)
@@ -266,7 +273,7 @@ Ikuti dari atas ke bawah. Langkah bertanda **[T1]** hanya untuk Tahap 1, **[T2]*
    - **Deployment name:** `parse` · **Deployment type:** Global Standard · **Model version:** `2025-04-14`
    - **Tokens per Minute Rate Limit:** 50K (T1 boleh 10K)
 2. **Deploy**. Kalau kuota tidak cukup, turunkan TPM.
-3. Uji di **Playground → Chat** dengan deployment `parse`: ketik "Balas: ok".
+3. Uji di **Playground** dengan deployment `parse`: ketik "Balas: ok".
 
 ### 5.5 Deploy AI STT
 
@@ -366,14 +373,24 @@ SUPABASE_PUBLISHABLE=sb_publishable_…
 echo "ACR=$ACR"                            # catat, dipakai lagi saat update
 ```
 
-### 6.2 Azure OpenAI
+### 6.2 Foundry resource & project
 
 ```bash
 az cognitiveservices account create -g $RG -n $AI -l $AI_LOC \
-  --kind OpenAI --sku S0 --custom-domain $AI --yes
+  --kind AIServices --sku S0 --custom-domain $AI \
+  --assign-identity --allow-project-management true --yes
+az cognitiveservices account project create -g $RG -n $AI --project-name centsible --location $AI_LOC
+
 AI_KEY=$(az cognitiveservices account keys list -g $RG -n $AI --query key1 -o tsv)
 AI_URL=https://$AI.openai.azure.com/openai/v1/
+az cognitiveservices account show -g $RG -n $AI --query "properties.endpoints" -o json   # harus ada "OpenAI Language Model Instance API"
 ```
+
+- `--kind AIServices` = Foundry resource. `--kind OpenAI` membuat Azure OpenAI resource lama (masih jalan, tapi tidak tampil di portal Foundry baru).
+- `--assign-identity` **wajib** bila project management aktif; tanpanya pembuatan project gagal. Ini hanya menyalakan *system-assigned identity*, bukan membuat role assignment, jadi aman di DTETI-LabIT.
+- `--allow-project-management` **tidak bisa diubah** setelah resource dibuat.
+- Deployment model (6.4–6.5) berada di level **resource**, bukan project, jadi perintahnya tidak berubah.
+- `az cognitiveservices account project` butuh Azure CLI **≥ 2.80.0** (`az version`, `az upgrade`).
 
 ### 6.3 Cek ketersediaan & kuota
 
@@ -574,6 +591,8 @@ Angka di atas perkiraan; pantau **Cost Management → Cost analysis** (scope RG)
 
 | Gejala | Penyebab | Solusi |
 |---|---|---|
+| Project gagal dibuat: *managed identity must be enabled* | Resource dibuat tanpa `--assign-identity` | `az cognitiveservices account identity assign -g $RG -n $AI`, lalu ulangi pembuatan project |
+| Resource tidak muncul di portal Foundry baru | Yang dibuat Azure OpenAI resource (`kind: OpenAI`) | Upgrade lewat banner **Get Started** di Overview resource (5.2), atau buka lewat Foundry *(classic)* |
 | `RequestDisallowedByPolicy` (T1) | Region di luar daftar policy Students | Pakai `japaneast` / `uaenorth` |
 | `MissingSubscriptionRegistration` (T1) | Resource provider belum terdaftar | 5.1 langkah 3 / 6.1 |
 | `AuthorizationFailed` di level langganan (T2) | Akses DTETI-LabIT hanya di RG | Selalu pakai `-g Resource_Group_25-27`; jangan buat RG baru |
@@ -600,7 +619,7 @@ Angka di atas perkiraan; pantau **Cost Management → Cost analysis** (scope RG)
 - **Rollback versi di Container Apps:** Container App → **Revisions and replicas** → aktifkan revisi lama, atau `az containerapp update --image …:<tag-lama>`.
 - **Hapus Tahap 1 (Azure for Students):**
   - Portal: Resource groups → `rg-centsible` → **Delete resource group**.
-  - CLI: `az group delete -n rg-centsible --yes`, lalu `az cognitiveservices account purge -g rg-centsible -n <nama> -l uaenorth` kalau nama Azure OpenAI ingin dipakai lagi (resource yang dihapus masuk *soft-delete* 48 jam).
+  - CLI: `az group delete -n rg-centsible --yes`, lalu `az cognitiveservices account purge -g rg-centsible -n <nama> -l uaenorth` kalau nama Foundry resource ingin dipakai lagi (resource yang dihapus masuk *soft-delete* 48 jam).
 - **Hapus Tahap 2 (DTETI-LabIT):** RG **tidak boleh dihapus**, jadi hapus isinya:
   - Portal: `Resource_Group_25-27` → centang resource Centsible → **Delete**.
   - CLI:
@@ -609,6 +628,7 @@ Angka di atas perkiraan; pantau **Cost Management → Cost analysis** (scope RG)
     az containerapp delete -g $RG -n centsible --yes
     az containerapp env delete -g $RG -n cae-centsible --yes
     az acr delete -g $RG -n $ACR --yes
+    az cognitiveservices account project delete -g $RG -n $AI --project-name centsible
     az cognitiveservices account delete -g $RG -n $AI
     az resource list -g $RG -o table      # sisa, mis. Log Analytics workspace
     ```
@@ -624,7 +644,9 @@ Data langganan (bagian 1) dari Azure CLI pada 27 Nov 2026. Klaim lain dicek ke M
 |---|---|---|
 | Base URL v1 `…/openai/v1/`, header `api-key`, `model` = nama deployment, tanpa `api-version` | ✅ | Azure OpenAI v1 API |
 | `/openai/v1/audio/transcriptions` menerima `file`, `model`, `language`, `prompt`, `response_format` | ✅ | REST reference Azure OpenAI |
-| `az cognitiveservices account create --kind OpenAI --sku S0 --custom-domain` | ✅ | Quickstart Azure OpenAI (CLI) |
+| Foundry resource (`--kind AIServices`) adalah tipe utama untuk resource baru; Azure OpenAI resource hanya punya endpoint `/openai/v1` dan tidak didukung portal Foundry baru | ✅ | *Deployments overview*, *Foundry GA scope*, *SDK overview* |
+| `az cognitiveservices account create --kind AIServices --assign-identity --allow-project-management true --custom-domain` + `account project create` | ✅ | *Quickstart: create Foundry resources* (CLI ≥ 2.80.0) |
+| Upgrade Azure OpenAI → Foundry mempertahankan endpoint, kunci, dan deployment | ✅ | *Upgrade from Azure OpenAI to Microsoft Foundry* |
 | `az cognitiveservices account deployment create … --sku-name GlobalStandard --sku-capacity` | ✅ | *Automate quota deployments* |
 | Ketersediaan model per region | ✅ dicek langsung di kedua langganan | `az cognitiveservices model list` |
 | Quota tier Tier 0 & larangan tambah kuota; kredit ≠ kuota | ✅ | *Azure OpenAI quotas and limits* |
